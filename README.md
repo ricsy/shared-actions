@@ -1,18 +1,23 @@
 # shared-actions
 
-通用 GitHub Actions 工作流集合
+通用 GitHub Actions 工作流和 Action 集合
+
+## 特性
+
+- **Action** - 可复用的步骤组合，直接被 workflow 调用
+- **Workflow** - 触发器定义，负责启动 CI/CD 流程
 
 ## 目录结构
 
 ```
 .github/
 ├── actions/            # 可复用 Action
-│   └── pypi/          # PyPI 构建和发布
-│       └── action.yml  # 复用步骤
+│   └── pypi/         # PyPI 构建和发布
+│       └── action.yml
 └── workflows/
-    ├── python/         # Python 相关
-    │   └── build.yml   # 构建和测试
-    └── publish/        # 发布相关
+    ├── python/       # Python 项目
+    │   └── build.yml  # 构建和测试
+    └── publish/       # 发布相关
         ├── pypi.yml        # PyPI 发布（workflow_call）
         └── release-pypi.yml # PyPI Release 发布（release trigger）
 ```
@@ -21,24 +26,20 @@
 
 ### actions/pypi
 
-PyPI 构建和发布 Action，其他项目可直接调用。
+构建 Python 包并通过 Trusted Publishing 发布到 PyPI
 
-| 参数               | 默认值      | 说明                  |
-|------------------|----------|---------------------|
-| `python-version` | `"3.x"`  | Python 版本           |
-| `package-dir`    | `"."`    | 包目录路径               |
-| `environment`    | `"pypi"` | PyPI environment 名称 |
+| 参数               | 默认值     | 说明        |
+|------------------|---------|-----------|
+| `python-version` | `"3.x"` | Python 版本 |
+| `package-dir`    | `"."`   | 包目录路径     |
 
 ```yaml
-# 项目自己的 workflow
+# 项目 workflow 中直接调用
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - uses: ricsy/shared-actions/.github/actions/pypi@main
-        with:
-          python-version: "3.x"
-          environment: pypi
+      - uses: ricsy/shared-actions/.github/actions/pypi@master
 ```
 
 ## 工作流
@@ -58,7 +59,7 @@ Python 项目构建和测试（检出代码、安装依赖、运行测试）
 ```yaml
 jobs:
   build:
-    uses: owner/shared-actions/.github/workflows/python/build.yml@main
+    uses: ricsy/shared-actions/.github/workflows/python/build.yml@master
 ```
 
 ### publish/pypi
@@ -76,19 +77,19 @@ jobs:
 ```yaml
 jobs:
   publish:
-    uses: owner/shared-actions/.github/workflows/publish/pypi.yml@main
+    uses: ricsy/shared-actions/.github/workflows/publish/pypi.yml@master
 ```
 
 **前置要求**：仓库需设置 environment 并配置 Trusted Publishing (OIDC)
 
 ### publish/release-pypi
 
-在 GitHub Release 发布时自动构建并发布到 PyPI。
+在 GitHub Release 发布时自动构建并发布到 PyPI
 
 > 推荐直接使用 action
 
 ```yaml
-# 在项目 .github/workflows/release.yml 中
+# 项目 .github/workflows/release.yml
 on:
   release:
     types: [published]
@@ -97,11 +98,11 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: ricsy/shared-actions/.github/actions/pypi@main
+      - uses: ricsy/shared-actions/.github/actions/pypi@master
 ```
 
 **前置要求**：仓库需设置 `pypi` environment 并配置 Trusted Publishing (OIDC)
 
 ## 贡献
 
-欢迎提交 PR 添加新的通用工作流详见 [CONTRIBUTING.md](CONTRIBUTING.md)
+欢迎提交 PR 添加新的通用工作流。详见 [CONTRIBUTING.md](CONTRIBUTING.md)

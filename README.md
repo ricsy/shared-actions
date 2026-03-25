@@ -1,6 +1,6 @@
 # shared-actions
 
-通用 GitHub Actions 工作流和 Action 集合
+通用 GitHub Actions 工作流和 Action 集合。
 
 ## 特性
 
@@ -11,50 +11,50 @@
 
 ```
 .github/
-├── actions/            # 可复用 Action
-│   └── pypi/         # PyPI 构建和发布
-│       └── action.yml
+├── actions/
+│   └── pypi/
+│       └── build.yml      # Python 包构建
 └── workflows/
-    ├── python/       # Python 项目
-    │   └── build.yml  # 构建和测试
-    └── publish/       # 发布相关
-        ├── pypi.yml        # PyPI 发布（workflow_call）
+    ├── python/
+    │   └── build.yml     # Python 项目构建和测试
+    └── publish/
+        ├── pypi.yml      # PyPI 发布（workflow_call）
         └── release-pypi.yml # PyPI Release 发布（release trigger）
 ```
 
 ## Action
 
-### actions/pypi
+### actions/pypi/build
 
-构建 Python 包并通过 Trusted Publishing 发布到 PyPI
+构建 Python 包（仅构建，不发布）。
 
-| 参数               | 默认值     | 说明        |
-|------------------|---------|-----------|
+| 参数 | 默认值 | 说明 |
+|-----|-------|------|
 | `python-version` | `"3.x"` | Python 版本 |
-| `package-dir`    | `"."`   | 包目录路径     |
+| `package-dir` | `"."` | 包目录路径 |
 
 ```yaml
-# 项目 workflow 中直接调用
+# 项目 workflow 中调用
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: ricsy/shared-actions/.github/actions/pypi@master
+      - uses: ricsy/shared-actions/.github/actions/pypi/build@master
 ```
 
 ## 工作流
 
 ### python/build
 
-Python 项目构建和测试（检出代码、安装依赖、运行测试）
+Python 项目构建和测试（检出代码、安装依赖、运行测试）。
 
 > 大部分参数使用默认即可
 
-| 参数               | 默认值        | 说明               | 必需 |
-|------------------|------------|------------------|----|
-| `python-version` | `"3.11"`   | Python 版本        | 否  |
-| `install-flags`  | `"-e ."`   | pip install 安装参数 | 否  |
-| `tests-dir`      | `"tests/"` | 测试目录路径           | 否  |
+| 参数 | 默认值 | 说明 | 必需 |
+|-----|-------|------|-----|
+| `python-version` | `"3.11"` | Python 版本 | 否 |
+| `install-flags` | `"-e ."` | pip install 安装参数 | 否 |
+| `tests-dir` | `"tests/"` | 测试目录路径 | 否 |
 
 ```yaml
 jobs:
@@ -64,15 +64,14 @@ jobs:
 
 ### publish/pypi
 
-发布 Python 包到 PyPI（可被其他工作流调用）
+发布 Python 包到 PyPI（可被其他工作流调用）。
 
 > 大部分参数使用默认即可
 
-| 参数               | 默认值      | 说明                  | 必需 |
-|------------------|----------|---------------------|----|
-| `python-version` | `"3.x"`  | Python 版本           | 否  |
-| `package-dir`    | `"."`    | 包目录路径               | 否  |
-| `environment`    | `"pypi"` | PyPI environment 名称 | 否  |
+| 参数 | 默认值 | 说明 | 必需 |
+|-----|-------|------|-----|
+| `python-version` | `"3.x"` | Python 版本 | 否 |
+| `package-dir` | `"."` | 包目录路径 | 否 |
 
 ```yaml
 jobs:
@@ -84,9 +83,7 @@ jobs:
 
 ### publish/release-pypi
 
-在 GitHub Release 发布时自动构建并发布到 PyPI
-
-> 推荐直接使用 action
+在 GitHub Release 发布时自动构建并发布到 PyPI。
 
 ```yaml
 # 项目 .github/workflows/release.yml
@@ -96,9 +93,7 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: ricsy/shared-actions/.github/actions/pypi@master
+    uses: ricsy/shared-actions/.github/workflows/publish/release-pypi.yml@master
 ```
 
 **前置要求**：仓库需设置 `pypi` environment 并配置 Trusted Publishing (OIDC)

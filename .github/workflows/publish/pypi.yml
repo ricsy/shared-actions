@@ -7,7 +7,6 @@
 # 输入：
 #   python-version: Python 版本（默认 3.x）
 #   package-dir: 包目录路径（默认 .）
-#   environment: PyPI environment 名称（默认 pypi）
 #
 # 前置要求：
 #   1. 仓库设置 environment
@@ -16,7 +15,7 @@
 # 使用示例：
 #   jobs:
 #     publish:
-#       uses: owner/shared-actions/.github/workflows/publish/pypi.yml@main
+#       uses: ricsy/shared-actions/.github/workflows/publish/pypi.yml@master
 # =============================================================================
 
 name: Publish to PyPI
@@ -32,10 +31,6 @@ on:
         required: false
         type: string
         default: "."
-      environment:
-        required: false
-        type: string
-        default: "pypi"
 
 jobs:
   pypi-publish:
@@ -43,9 +38,21 @@ jobs:
     permissions:
       id-token: write
     steps:
-      # 调用 pypi action 完成构建和发布
-      - uses: ricsy/shared-actions/.github/actions/pypi@main
+      # 1. 使用 build action 构建
+      - uses: ricsy/shared-actions/.github/actions/pypi/build@master
         with:
           python-version: ${{ inputs.python-version }}
           package-dir: ${{ inputs.package-dir }}
-          environment: ${{ inputs.environment }}
+
+      # 2. 下载构建产物
+      - name: 下载构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: release-dists
+          path: dist/
+
+      # 3. 使用 Trusted Publishing 上传至 PyPI
+      - name: 发布到 PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/

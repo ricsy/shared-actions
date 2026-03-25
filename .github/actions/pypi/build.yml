@@ -1,23 +1,21 @@
 # =============================================================================
-# PyPI 构建和发布 Action
+# PyPI 构建 Action
 #
-# 功能：构建 Python 包并通过 Trusted Publishing 发布到 PyPI
+# 功能：构建 Python 包
 #
 # 输入：
 #   python-version: Python 版本（默认 3.x）
 #   package-dir: 包目录路径（默认 .）
-#   environment: PyPI environment 名称（默认 pypi）
 #
 # 使用方式：
 #   steps:
-#     - uses: ricsy/shared-actions/.github/actions/pypi@main
+#     - uses: ricsy/shared-actions/.github/actions/pypi/build@master
 #       with:
 #         python-version: "3.x"
-#         environment: pypi
 # =============================================================================
 
-name: Build and Publish to PyPI
-description: 构建 Python 包并通过 Trusted Publishing 发布到 PyPI
+name: Build Python Package
+description: 构建 Python 包
 
 inputs:
   python-version:
@@ -28,15 +26,11 @@ inputs:
     required: false
     type: string
     default: "."
-  environment:
-    required: false
-    type: string
-    default: "pypi"
 
 runs:
   using: composite
   steps:
-    # 1. 检出代码（默认获取完整 commit 历史）
+    # 1. 检出代码
     - uses: actions/checkout@v4
 
     # 2. 设置 Python 环境
@@ -44,29 +38,16 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
-    # 3. 构建源码包（sdist）和 wheel 包
+    # 3. 构建源码包和 wheel 包
     - name: 构建发布包
       shell: bash
       run: |
         python -m pip install build
         python -m build
 
-    # 4. 将构建产物上传为 artifact
+    # 4. 上传构建产物
     - name: 上传构建产物
       uses: actions/upload-artifact@v4
       with:
         name: release-dists
         path: ${{ inputs.package-dir }}/dist/
-
-    # 5. 下载 artifact
-    - name: 下载构建产物
-      uses: actions/download-artifact@v4
-      with:
-        name: release-dists
-        path: dist/
-
-    # 6. 使用 Trusted Publishing 上传至 PyPI
-    - name: 发布到 PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        packages-dir: dist/

@@ -9,7 +9,7 @@
 #
 # 使用方式：
 #   steps:
-#     - uses: ricsy/shared-actions/.github/actions/pypi/build@master
+#     - uses: ricsy/shared-actions/.github/actions/pypi@master
 #       with:
 #         python-version: "3.x"
 # =============================================================================

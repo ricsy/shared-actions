@@ -25,7 +25,7 @@ jobs:
       id-token: write
     steps:
       # 1. 使用 build action 构建
-      - uses: ricsy/shared-actions/.github/actions/pypi/build@master
+      - uses: ricsy/shared-actions/.github/actions/pypi@master
 
       # 2. 下载构建产物
       - name: 下载构建产物

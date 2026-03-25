@@ -13,7 +13,7 @@
 .github/
 ├── actions/
 │   └── pypi/
-│       └── build.yml      # Python 包构建
+│       └── action.yml     # Python 包构建
 └── workflows/
     ├── python/
     │   └── build.yml     # Python 项目构建和测试
@@ -24,7 +24,7 @@
 
 ## Action
 
-### actions/pypi/build
+### actions/pypi
 
 构建 Python 包（仅构建，不发布）。
 
@@ -39,7 +39,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: ricsy/shared-actions/.github/actions/pypi/build@master
+      - uses: ricsy/shared-actions/.github/actions/pypi@master
 ```
 
 ## 工作流

@@ -39,7 +39,7 @@ jobs:
       id-token: write
     steps:
       # 1. 使用 build action 构建
-      - uses: ricsy/shared-actions/.github/actions/pypi/build@master
+      - uses: ricsy/shared-actions/.github/actions/pypi@master
         with:
           python-version: ${{ inputs.python-version }}
           package-dir: ${{ inputs.package-dir }}

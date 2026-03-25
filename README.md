@@ -18,8 +18,7 @@
     ├── python/
     │   └── build.yml     # Python 项目构建和测试
     └── publish/
-        ├── pypi.yml      # PyPI 发布（workflow_call）
-        └── release-pypi.yml # PyPI Release 发布（release trigger）
+        └── pypi.yml      # PyPI 发布（workflow_call）
 ```
 
 ## Action
@@ -81,22 +80,50 @@ jobs:
 
 **前置要求**：仓库需设置 environment 并配置 Trusted Publishing (OIDC)
 
-### publish/release-pypi
+## 注意事项
 
-在 GitHub Release 发布时自动构建并发布到 PyPI。
+### Action 文件命名
+- Action 目录下的入口文件**必须**命名为 `action.yml`
+- 自定义文件名（如 `build.yml`）会导致 GitHub Actions 报错：`Can't find 'action.yml'`
+
+### Composite Action 与 Docker
+- **不要**在 composite action 中直接使用需要 Docker 的 action（如 `pypa/gh-action-pypi-publish`）
+- GitHub 会尝试将 composite action 所在仓库作为 Docker 镜像来源，导致错误
+- **解决方案**：构建 action 只负责构建，发布步骤放在调用方 workflow 中
+
+### Workflow 触发器限制
+- 带有 `release` 触发器的 workflow **不能**通过 `uses:` 被其他 workflow 复用
+- 原因：`release` 是事件触发型，无法作为 `workflow_call` 被调用
+- **解决方案**：对于 release 发布，需在项目 workflow 中直接引用 action，而不是引用 workflow
+
+### 示例：正确的 Release Workflow
 
 ```yaml
 # 项目 .github/workflows/release.yml
+name: 发布到 PyPI
+
 on:
   release:
     types: [published]
 
 jobs:
   release:
-    uses: ricsy/shared-actions/.github/workflows/publish/release-pypi.yml@master
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      # 直接使用 action 构建
+      - uses: ricsy/shared-actions/.github/actions/pypi@master
+      # 下载构建产物
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-dists
+          path: dist/
+      # 发布到 PyPI（不在 composite action 中）
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
 ```
-
-**前置要求**：仓库需设置 `pypi` environment 并配置 Trusted Publishing (OIDC)
 
 ## 贡献
 

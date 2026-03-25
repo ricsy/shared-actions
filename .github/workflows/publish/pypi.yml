@@ -1,0 +1,51 @@
+# =============================================================================
+# PyPI 发布工作流
+#
+# 功能：构建并发布 Python 包到 PyPI
+# 触发：workflow_call（其他工作流调用）
+#
+# 输入：
+#   python-version: Python 版本（默认 3.x）
+#   package-dir: 包目录路径（默认 .）
+#   environment: PyPI environment 名称（默认 pypi）
+#
+# 前置要求：
+#   1. 仓库设置 environment
+#   2. 配置 Trusted Publishing (OIDC)
+#
+# 使用示例：
+#   jobs:
+#     publish:
+#       uses: owner/shared-actions/.github/workflows/publish/pypi.yml@main
+# =============================================================================
+
+name: Publish to PyPI
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        required: false
+        type: string
+        default: "3.x"
+      package-dir:
+        required: false
+        type: string
+        default: "."
+      environment:
+        required: false
+        type: string
+        default: "pypi"
+
+jobs:
+  pypi-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      # 调用 pypi action 完成构建和发布
+      - uses: ricsy/shared-actions/.github/actions/pypi@main
+        with:
+          python-version: ${{ inputs.python-version }}
+          package-dir: ${{ inputs.package-dir }}
+          environment: ${{ inputs.environment }}

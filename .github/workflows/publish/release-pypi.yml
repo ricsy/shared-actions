@@ -1,0 +1,38 @@
+# =============================================================================
+# PyPI Release 发布工作流
+#
+# 功能：在 GitHub Release 发布时自动构建并发布 Python 包到 PyPI
+# 触发：release（GitHub Release published 时触发）
+#
+# 输入：
+#   python-version: Python 版本（默认 3.x）
+#   package-dir: 包目录路径（默认 .）
+#   environment: PyPI environment 名称（默认 pypi）
+#
+# 前置要求：
+#   1. 仓库设置 environment
+#   2. 配置 Trusted Publishing (OIDC)
+#
+# 使用方式：
+#   此工作流为 release 触发，其他项目推荐直接使用 action：
+#   steps:
+#     - uses: ricsy/shared-actions/.github/actions/pypi@main
+# =============================================================================
+
+name: Publish to PyPI on Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  pypi-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      # 调用 pypi action 完成构建和发布
+      - uses: ricsy/shared-actions/.github/actions/pypi@main
+        with:
+          python-version: "3.x"
+          environment: pypi

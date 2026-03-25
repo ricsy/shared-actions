@@ -1,0 +1,59 @@
+# =============================================================================
+# Python 项目构建和测试工作流
+#
+# 功能：检出代码、安装依赖、运行测试
+# 触发：workflow_call（其他工作流调用）
+#
+# 输入：
+#   python-version: Python 版本（默认 3.11）
+#   install-flags: pip install 安装参数（默认 -e .）
+#   tests-dir: 测试目录路径（默认 tests/）
+#
+# 使用示例：
+#   jobs:
+#     build:
+#       uses: owner/shared-actions/.github/workflows/python/build.yml@main
+#       with:
+#         python-version: "3.12"
+#         install-flags: ".[dev]"
+#         tests-dir: "tests/"
+# =============================================================================
+
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        required: false
+        type: string
+        default: "3.11"
+      install-flags:
+        required: false
+        type: string
+        default: "-e ."
+      tests-dir:
+        required: false
+        type: string
+        default: "tests/"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. 检出代码（默认获取完整 commit 历史）
+      - uses: actions/checkout@v4
+
+      # 2. 设置 Python 环境
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      # 3. 安装项目依赖
+      - name: Install dependencies
+        run: pip install ${{ inputs.install-flags }}
+
+      # 4. 运行测试
+      - name: Run tests
+        run: pytest ${{ inputs.tests-dir }}

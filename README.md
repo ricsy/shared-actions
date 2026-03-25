@@ -1,6 +1,6 @@
 # shared-actions
 
-通用 GitHub Actions 工作流和 Action 集合。
+通用 GitHub Actions 工作流和 Action 集合
 
 ## 特性
 
@@ -25,7 +25,7 @@
 
 ### actions/pypi
 
-构建 Python 包（仅构建，不发布）。
+构建 Python 包（仅构建，不发布）
 
 | 参数               | 默认值     | 说明        |
 |------------------|---------|-----------|
@@ -45,7 +45,7 @@ jobs:
 
 ### python/build
 
-Python 项目构建和测试（检出代码、安装依赖、运行测试）。
+Python 项目构建和测试（检出代码、安装依赖、运行测试）
 
 > 大部分参数使用默认即可
 
@@ -63,7 +63,7 @@ jobs:
 
 ### publish/pypi
 
-发布 Python 包到 PyPI（可被其他工作流调用）。
+发布 Python 包到 PyPI（可被其他工作流调用）
 
 > 大部分参数使用默认即可
 

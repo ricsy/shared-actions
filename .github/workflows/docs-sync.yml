@@ -37,6 +37,7 @@ on:
 env:
   NODE_VERSION: '24'
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   CLAUDE_API_URL: 'https://api.minimaxi.com/anthropic/v1/messages'
   CLAUDE_MODEL: 'MiniMax-M2.7'
 

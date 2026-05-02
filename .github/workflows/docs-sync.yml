@@ -1,0 +1,141 @@
+# ==================================================
+# 文档同步并提交工作流（可复用）
+# ==================================================
+# 功能说明：
+#   1. 每天定时或手动触发文档同步
+#   2. 从远程文档源拉取最新文档
+#   3. 如果有文件变更，使用 AI 生成 commit message
+#   4. 自动提交并推送变更
+# ==================================================
+# 使用方式：
+#   jobs:
+#     sync:
+#       uses: ricsy/shared-actions/.github/workflows/docs-sync.yml@main
+#       with:
+#         sync-command: "pnpm sync"
+#         doc-type: "cc-docs"  # 或 "openclaw-docs"
+# ==================================================
+
+name: Daily Sync and Commit
+
+on:
+  workflow_call:
+    inputs:
+      sync-command:
+        required: true
+        type: string
+        description: "同步命令"
+      prompt:
+        required: false
+        type: string
+        description: "生成 commit message 的提示词"
+        default: "Analyze the following documentation sync output and generate a concise commit message.\n\nSync output:\n$SYNC_OUTPUT\n\nRequirements:\n- Title max 100 characters\n- Always use docs: prefix\n- Title summarizes the main changes\n- Body lists added/updated/removed files\n\nOutput ONLY the commit message, format:\ndocs: <title>\n\n- <file list>"
+    secrets:
+      ANTHROPIC_AUTH_TOKEN:
+        required: true
+
+env:
+  NODE_VERSION: '24'
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
+  CLAUDE_API_URL: 'https://api.minimaxi.com/anthropic/v1/messages'
+  CLAUDE_MODEL: 'MiniMax-M2.7'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: build-commit
+
+    steps:
+      # 1. 检出代码仓库
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. 设置 Node.js 环境
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # 3. 安装 pnpm
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      # 4. 安装项目依赖
+      - name: Install dependencies
+        run: |
+          pnpm install --ignore-scripts
+
+      # 5. 执行文档同步
+      - name: Run sync
+        id: sync
+        run: |
+          ${{ inputs.sync-command }} 2>&1 | tee sync-output.txt
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "HAS_CHANGES=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "HAS_CHANGES=false" >> "$GITHUB_OUTPUT"
+          fi
+        continue-on-error: true
+
+      # 6. 检查是否有变更
+      - name: Check for changes
+        if: steps.sync.outputs.HAS_CHANGES == 'true'
+        run: echo "检测到文档变更，准备生成提交信息..."
+
+      # 7. 保存同步输出
+      - name: Save sync output
+        if: steps.sync.outputs.HAS_CHANGES == 'true'
+        run: |
+          cp sync-output.txt /tmp/sync-output.txt
+
+      # 8. 使用 AI 生成 commit message
+      - name: Generate AI commit message
+        if: steps.sync.outputs.HAS_CHANGES == 'true'
+        id: ai_summary
+        run: |
+          SYNC_OUTPUT=$(cat /tmp/sync-output.txt)
+          PROMPT="${{ inputs.prompt }}"
+          FINAL_PROMPT="${PROMPT//\$SYNC_OUTPUT/$SYNC_OUTPUT}"
+
+          REQUEST_PAYLOAD=$(jq -n \
+            --arg model "$CLAUDE_MODEL" \
+            --arg content "$FINAL_PROMPT" \
+            '{"model": $model, "messages": [{"role": "user", "content": $content}]}')
+
+          RESPONSE=$(curl -s -X POST "$CLAUDE_API_URL" \
+            -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$REQUEST_PAYLOAD")
+
+          COMMIT_MSG=$(echo "$RESPONSE" | jq -r 'if .content then .content[] | select(.type == "text") | .text else "" end')
+          echo "$COMMIT_MSG" > /tmp/commit-msg.txt
+        continue-on-error: true
+
+      # 9. 提交并推送变更
+      - name: Commit and push changes
+        if: steps.sync.outputs.HAS_CHANGES == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+
+          if [ -s /tmp/commit-msg.txt ]; then
+            git commit -F /tmp/commit-msg.txt
+          else
+            git commit -m "docs: sync documentation updates
+
+            - Updated documentation
+            - Run sync at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          fi
+
+          git push
+        continue-on-error: true

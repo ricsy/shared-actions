@@ -1,5 +1,5 @@
 # ==================================================
-# 文档同步并提交工作流（可复用）
+# 文档同步并提交工作流
 # ==================================================
 # 功能说明：
 #   1. 每天定时或手动触发文档同步
@@ -13,7 +13,6 @@
 #       uses: ricsy/shared-actions/.github/workflows/docs-sync.yml@main
 #       with:
 #         sync-command: "pnpm sync"
-#         doc-type: "cc-docs"  # 或 "openclaw-docs"
 # ==================================================
 
 name: Daily Sync and Commit
@@ -31,7 +30,7 @@ on:
         description: "生成 commit message 的提示词"
         default: "Analyze the following documentation sync output and generate a concise commit message.\n\nSync output:\n$SYNC_OUTPUT\n\nRequirements:\n- Title max 100 characters\n- Always use docs: prefix\n- Title summarizes the main changes\n- Body lists added/updated/removed files\n\nOutput ONLY the commit message, format:\ndocs: <title>\n\n- <file list>"
     secrets:
-      ANTHROPIC_AUTH_TOKEN:
+      anthropic_auth_token:
         required: true
 
 env:
@@ -47,7 +46,6 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: build-commit
 
     steps:
       # 1. 检出代码仓库
@@ -111,7 +109,7 @@ jobs:
             '{"model": $model, "messages": [{"role": "user", "content": $content}]}')
 
           RESPONSE=$(curl -s -X POST "$CLAUDE_API_URL" \
-            -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" \
+            -H "Authorization: Bearer ${{ secrets.anthropic_auth_token }}" \
             -H "Content-Type: application/json" \
             -d "$REQUEST_PAYLOAD")
 

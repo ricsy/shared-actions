@@ -1,0 +1,19 @@
+{
+  "name": "shared-actions",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "",
+  "author": "ricsy",
+  "license": "MIT",
+  "keywords": [
+  ],
+  "scripts": {
+    "prepare": "pip install pre-commit && pre-commit install",
+    "lint": "npm-run-all2 lint:**",
+    "lint:action": "github-actionlint"
+  },
+  "devDependencies": {
+    "github-actionlint": "^1.7.12",
+    "npm-run-all2": "^8.0.4"
+  }
+}

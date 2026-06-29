@@ -31,7 +31,7 @@ on:
         default: "Analyze the following documentation sync output and generate a concise commit message.\n\nSync output:\n$SYNC_OUTPUT\n\nRequirements:\n- Title max 100 characters\n- Always use docs: prefix\n- Title summarizes the main changes\n- Body lists added/updated/removed files\n\nOutput ONLY the commit message, format:\ndocs: <title>\n\n- <file list>"
     secrets:
       anthropic_auth_token:
-        required: true
+        required: false
 
 env:
   NODE_VERSION: '24'
@@ -74,6 +74,7 @@ jobs:
       - name: Run sync
         id: sync
         run: |
+          set -o pipefail
           ${{ inputs.sync-command }} 2>&1 | tee sync-output.txt
 
           if [ -n "$(git status --porcelain)" ]; then
@@ -81,7 +82,6 @@ jobs:
           else
             echo "HAS_CHANGES=false" >> "$GITHUB_OUTPUT"
           fi
-        continue-on-error: true
 
       # 6. 检查是否有变更
       - name: Check for changes
@@ -98,7 +98,14 @@ jobs:
       - name: Generate AI commit message
         if: steps.sync.outputs.HAS_CHANGES == 'true'
         id: ai_summary
+        env:
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.anthropic_auth_token }}
         run: |
+          if [ -z "$ANTHROPIC_AUTH_TOKEN" ]; then
+            echo "Anthropic auth token is not configured. Skip AI commit message generation."
+            exit 0
+          fi
+
           SYNC_OUTPUT=$(cat /tmp/sync-output.txt)
           PROMPT="${{ inputs.prompt }}"
           FINAL_PROMPT="${PROMPT//\$SYNC_OUTPUT/$SYNC_OUTPUT}"
@@ -109,12 +116,18 @@ jobs:
             '{"model": $model, "messages": [{"role": "user", "content": $content}]}')
 
           RESPONSE=$(curl -s -X POST "$CLAUDE_API_URL" \
-            -H "Authorization: Bearer ${{ secrets.anthropic_auth_token }}" \
+            -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" \
             -H "Content-Type: application/json" \
             -d "$REQUEST_PAYLOAD")
 
-          COMMIT_MSG=$(echo "$RESPONSE" | jq -r 'if .content then .content[] | select(.type == "text") | .text else "" end')
-          echo "$COMMIT_MSG" > /tmp/commit-msg.txt
+          COMMIT_MSG=$(echo "$RESPONSE" | jq -r 'if .content then [.content[] | select(.type == "text") | .text] | join("\n") else "" end')
+
+          if [ -n "$(printf '%s' "$COMMIT_MSG" | tr -d '[:space:]')" ]; then
+            printf '%s\n' "$COMMIT_MSG" > /tmp/commit-msg.txt
+          else
+            echo "AI response did not contain a usable commit message. Fallback to default message."
+            rm -f /tmp/commit-msg.txt
+          fi
         continue-on-error: true
 
       # 9. 提交并推送变更
@@ -126,7 +139,12 @@ jobs:
 
           git add -A
 
-          if [ -s /tmp/commit-msg.txt ]; then
+          if git diff --cached --quiet; then
+            echo "No staged changes to commit after sync."
+            exit 0
+          fi
+
+          if [ -f /tmp/commit-msg.txt ] && [ -n "$(tr -d '[:space:]' < /tmp/commit-msg.txt)" ]; then
             git commit -F /tmp/commit-msg.txt
           else
             git commit -m "docs: sync documentation updates
@@ -136,4 +154,3 @@ jobs:
           fi
 
           git push
-        continue-on-error: true

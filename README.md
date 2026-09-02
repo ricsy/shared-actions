@@ -90,7 +90,7 @@ jobs:
 | `REPO_DOCTOR_TOKEN` | 结果仓库 Issues read/write | preflight、report |
 | `COMMON_LIB_TOKEN` | repo-kit、shared-actions 与项目私有 Git 依赖 Contents read | preflight、repo-kit checkout、Git 镜像抓取 |
 
-inspect 不接收 `REPO_DOCTOR_TOKEN`。`COMMON_LIB_TOKEN` 仅传给不执行项目代码的 Git bare mirror 抓取，随后立即撤销；install 将 lockfile 中的 GitHub URL 映射到无凭证本地镜像，因此依赖生命周期脚本可正常执行但无法读取 token。两个 token 都不会传入 audit、lint、test、coverage 或 build，也不会持久化到 checkout。
+inspect 不接收 `REPO_DOCTOR_TOKEN`。`COMMON_LIB_TOKEN` 仅传给不执行项目代码的 Git bare mirror 抓取，随后立即撤销；install 将 lockfile 中的 GitHub URL 映射到无凭证本地镜像，并强制刷新可能由旧运行留下的 Git 包缓存，因此依赖生命周期脚本可正常执行但无法读取 token。两个 token 都不会传入 audit、lint、test、coverage 或 build，也不会持久化到 checkout。
 
 repo-kit 生成的调用方会读取仓库变量 `REPO_DOCTOR_RUNNER`；未设置时使用 `ubuntu-latest`。使用仓库级 self-hosted runner 时，将该变量设为 runner 的专用标签，例如 `repo-doctor`。
 

@@ -94,7 +94,10 @@ async function runPrepare(command, input, dependencies) {
       mirrors.push({ url: repository.url, mirror })
     }
 
-    const install = await runCommand(command, input, dependencies, true, gitMirrorEnvironment(mirrors))
+    const install = await runCommand({
+      ...command,
+      args: command.args.includes('--force') ? command.args : [...command.args, '--force'],
+    }, input, dependencies, true, gitMirrorEnvironment(mirrors))
     return { ...install, durationMs: elapsed(startedAt, dependencies.now) }
   }
   catch {

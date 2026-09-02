@@ -45,7 +45,7 @@ packages:
       expect(fake.calls[1].options.env.GIT_CONFIG_KEY_0).toContain('read-token')
       expect(fake.calls[2].options.env.GIT_CONFIG_KEY_0).toContain('file:')
       expect(JSON.stringify(fake.calls.slice(2))).not.toContain('read-token')
-      expect(fake.calls[2].args).toEqual(['install', '--frozen-lockfile'])
+      expect(fake.calls[2].args).toEqual(['install', '--frozen-lockfile', '--force'])
     }
     finally {
       await rm(root, { recursive: true, force: true })

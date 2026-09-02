@@ -70,7 +70,7 @@ jobs:
         uses: pnpm/action-setup@v6
         with:
           version: 11.8.0
-          dest: .repo-doctor/pnpm-helper
+          dest: ${{ runner.temp }}/repo-doctor/pnpm-helper
       - name: Install helper dependencies
         run: pnpm --dir .repo-doctor/shared-actions install --prod --frozen-lockfile --ignore-scripts
       - name: Resolve inspection mode
@@ -137,7 +137,7 @@ jobs:
         uses: pnpm/action-setup@v6
         with:
           version: 11.8.0
-          dest: .repo-doctor/pnpm-helper
+          dest: ${{ runner.temp }}/repo-doctor/pnpm-helper
       - name: Install helper dependencies
         run: pnpm --dir .repo-doctor/shared-actions install --prod --frozen-lockfile --ignore-scripts
       - name: Setup project Node.js
@@ -149,7 +149,7 @@ jobs:
         uses: pnpm/action-setup@v6
         with:
           version: ${{ inputs.pnpm_version }}
-          dest: .repo-doctor/pnpm-project
+          dest: ${{ runner.temp }}/repo-doctor/pnpm-project
       - name: Run inspection
         id: inspect
         env:
@@ -192,7 +192,7 @@ jobs:
         uses: pnpm/action-setup@v6
         with:
           version: 11.8.0
-          dest: .repo-doctor/pnpm-helper
+          dest: ${{ runner.temp }}/repo-doctor/pnpm-helper
       - name: Install helper dependencies
         run: pnpm --dir .repo-doctor/shared-actions install --prod --frozen-lockfile --ignore-scripts
       - name: Update central status

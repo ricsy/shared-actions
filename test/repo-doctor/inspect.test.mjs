@@ -1,3 +1,6 @@
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { runInspection } from '../../scripts/repo-doctor/inspect.mjs'
 import {
@@ -9,22 +12,10 @@ import {
 
 describe('repo-doctor inspect', () => {
   it('uses shell:false and keeps running after a quality failure', async () => {
-    const fake = spawnSequence([0, 0, 0, 1, 0])
+    const fake = spawnSequence([0, 0, 1, 0])
     const result = await runInspection(input(), { execaImpl: fake.execa })
 
-    expect(fake.calls.map(call => call.executable)).toEqual(['pnpm', 'pnpm', 'node', 'pnpm', 'pnpm'])
-    expect(fake.calls[0]).toMatchObject({
-      args: ['fetch', '--frozen-lockfile', '--ignore-scripts'],
-      options: {
-        env: {
-          GIT_CONFIG_COUNT: '1',
-          GIT_CONFIG_VALUE_0: 'https://github.com/',
-        },
-      },
-    })
-    expect(fake.calls[0].options.env.GIT_CONFIG_KEY_0).toContain('read-token')
-    expect(fake.calls[1].args).toEqual(['install', '--frozen-lockfile', '--offline'])
-    expect(JSON.stringify(fake.calls.slice(1))).not.toContain('read-token')
+    expect(fake.calls.map(call => call.executable)).toEqual(['pnpm', 'node', 'pnpm', 'pnpm'])
     expect(fake.calls.every(call => call.options.shell === false)).toBe(true)
     expect(fake.calls.every(call => call.options.stdio[1] === process.stderr && call.options.stdio[2] === process.stderr)).toBe(true)
     expect(result.status).toBe(InspectionStatus.Failed)
@@ -34,6 +25,31 @@ describe('repo-doctor inspect', () => {
       ['lint', InspectionStatus.Failed],
       ['test', InspectionStatus.Passed],
     ])
+  })
+
+  it('mirrors GitHub dependencies with a token before running install without it', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'repo-doctor-inspect-'))
+    try {
+      await writeFile(join(root, 'pnpm-lock.yaml'), `lockfileVersion: '9.0'
+packages:
+  agentlint@git:
+    resolution: {commit: abc123, repo: https://github.com/example/agentlint.git, type: git}
+`)
+      const fake = spawnSequence([0, 0, 0, 0])
+      await runInspection(input({
+        sourceRoot: root,
+        commandPlan: [input().commandPlan[0]],
+      }), { execaImpl: fake.execa })
+
+      expect(fake.calls.map(call => call.executable)).toEqual(['git', 'git', 'pnpm', 'node'])
+      expect(fake.calls[1].options.env.GIT_CONFIG_KEY_0).toContain('read-token')
+      expect(fake.calls[2].options.env.GIT_CONFIG_KEY_0).toContain('file:')
+      expect(JSON.stringify(fake.calls.slice(2))).not.toContain('read-token')
+      expect(fake.calls[2].args).toEqual(['install', '--frozen-lockfile'])
+    }
+    finally {
+      await rm(root, { recursive: true, force: true })
+    }
   })
 
   it('stops project quality commands after prepare failure but still records standards', async () => {

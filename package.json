@@ -6,8 +6,7 @@
   "description": "",
   "author": "ricsy",
   "license": "MIT",
-  "keywords": [
-  ],
+  "keywords": [],
   "scripts": {
     "prepare": "pip install pre-commit && pre-commit install",
     "repo-doctor": "node scripts/repo-doctor/cli.mjs",
@@ -19,6 +18,7 @@
     "commander": "^15.0.0",
     "execa": "^10.0.1",
     "octokit": "^5.0.5",
+    "yaml": "^2.9.0",
     "zod": "^4.5.4"
   },
   "devDependencies": {

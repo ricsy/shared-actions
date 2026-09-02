@@ -1,4 +1,9 @@
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { execa } from 'execa'
+import { parse as parseYaml } from 'yaml'
 import { z } from 'zod'
 import {
   aggregateInspectionStatus,
@@ -61,20 +66,46 @@ export async function runInspection(input, { execaImpl = execa, now = Date.now }
   }
 }
 
-/** 禁用依赖脚本完成认证抓取，再撤销凭证并离线安装。 */
+/** 先认证构建本地 Git 镜像，再撤销凭证并执行正常安装。 */
 async function runPrepare(command, input, dependencies) {
-  const fetch = await runCommand({
-    ...command,
-    args: ['fetch', '--frozen-lockfile', '--ignore-scripts'],
-  }, input, dependencies, true, gitReadEnvironment(input.projectReadToken))
-  if (fetch.status !== InspectionStatus.Passed)
-    return fetch
+  const startedAt = dependencies.now()
+  let mirrorRoot
+  try {
+    const repositories = await readGitRepositories(join(input.sourceRoot, 'pnpm-lock.yaml'))
+    if (repositories.length === 0)
+      return runCommand(command, input, dependencies, true)
 
-  const install = await runCommand({
-    ...command,
-    args: command.args.includes('--offline') ? command.args : [...command.args, '--offline'],
-  }, input, dependencies, true)
-  return { ...install, durationMs: fetch.durationMs + install.durationMs }
+    mirrorRoot = await mkdtemp(join(tmpdir(), 'repo-doctor-git-'))
+    const mirrors = []
+    for (const [index, repository] of repositories.entries()) {
+      const mirror = join(mirrorRoot, String(index))
+      const init = await runProcess({ executable: 'git', args: ['init', '--bare', mirror] }, input, dependencies.execaImpl)
+      if (init.kind !== 'exit' || init.exitCode !== 0)
+        return processCheck(command, init, elapsed(startedAt, dependencies.now), true)
+
+      for (const commit of repository.commits) {
+        const fetch = await runProcess({
+          executable: 'git',
+          args: ['-C', mirror, 'fetch', '--depth', '1', repository.url, commit],
+        }, input, dependencies.execaImpl, gitReadEnvironment(input.projectReadToken))
+        if (fetch.kind !== 'exit' || fetch.exitCode !== 0)
+          return processCheck(command, fetch, elapsed(startedAt, dependencies.now), true)
+      }
+      mirrors.push({ url: repository.url, mirror })
+    }
+
+    const install = await runCommand(command, input, dependencies, true, gitMirrorEnvironment(mirrors))
+    return { ...install, durationMs: elapsed(startedAt, dependencies.now) }
+  }
+  catch {
+    return check(command, InspectionStatus.Incomplete, elapsed(startedAt, dependencies.now), {
+      errorCode: RepoDoctorErrorCode.CommandSpawnFailed,
+    })
+  }
+  finally {
+    if (mirrorRoot)
+      await rm(mirrorRoot, { recursive: true, force: true })
+  }
 }
 
 /** 使用当前 repo-kit CLI 对源仓库执行 manifest standards 检查。 */
@@ -91,7 +122,11 @@ async function runStandards(input, dependencies) {
 async function runCommand(command, input, { execaImpl, now }, prepare, environment) {
   const startedAt = now()
   const result = await runProcess(command, input, execaImpl, environment)
-  const durationMs = Math.max(0, Math.round(now() - startedAt))
+  return processCheck(command, result, elapsed(startedAt, now), prepare)
+}
+
+/** 将受控进程结果映射为稳定检查状态。 */
+function processCheck(command, result, durationMs, prepare) {
   if (result.kind === 'timeout') {
     return check(command, InspectionStatus.Incomplete, durationMs, {
       errorCode: RepoDoctorErrorCode.CommandTimedOut,
@@ -110,6 +145,11 @@ async function runCommand(command, input, { execaImpl, now }, prepare, environme
     durationMs,
     { exitCode: result.exitCode, errorCode: RepoDoctorErrorCode.CommandFailed },
   )
+}
+
+/** 计算非负整数毫秒耗时。 */
+function elapsed(startedAt, now) {
+  return Math.max(0, Math.round(now() - startedAt))
 }
 
 /** 在无 shell 的受控子进程中执行命令，隔离超时与启动失败。 */
@@ -143,6 +183,35 @@ function gitReadEnvironment(token) {
     GIT_CONFIG_KEY_0: `url.https://x-access-token:${encodeURIComponent(token)}@github.com/.insteadOf`,
     GIT_CONFIG_VALUE_0: 'https://github.com/',
   }
+}
+
+/** 从 pnpm lockfile 收集需要认证的 GitHub HTTPS 仓库和提交。 */
+async function readGitRepositories(lockfilePath) {
+  const lockfile = parseYaml(await readFile(lockfilePath, 'utf8'))
+  const repositories = new Map()
+  for (const value of Object.values(lockfile?.packages ?? {})) {
+    const { resolution } = value ?? {}
+    if (resolution?.type !== 'git'
+      || typeof resolution.repo !== 'string'
+      || !resolution.repo.startsWith('https://github.com/')
+      || typeof resolution.commit !== 'string') {
+      continue
+    }
+    const commits = repositories.get(resolution.repo) ?? new Set()
+    commits.add(resolution.commit)
+    repositories.set(resolution.repo, commits)
+  }
+  return [...repositories].map(([url, commits]) => ({ url, commits: [...commits] }))
+}
+
+/** 将 GitHub URL 映射到不含凭证的本地 bare mirror。 */
+function gitMirrorEnvironment(mirrors) {
+  const environment = { GIT_CONFIG_COUNT: String(mirrors.length) }
+  for (const [index, { url, mirror }] of mirrors.entries()) {
+    environment[`GIT_CONFIG_KEY_${index}`] = `url.${pathToFileURL(mirror).href}.insteadOf`
+    environment[`GIT_CONFIG_VALUE_${index}`] = url
+  }
+  return environment
 }
 
 /** 构造一个符合巡检协议的检查结果。 */

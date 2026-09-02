@@ -1,0 +1,5 @@
+paths:
+  .github/workflows/repo-doctor.yml:
+    ignore:
+      # GitHub.com exposes these reusable-workflow fields; actionlint 1.7.12 has not added them yet.
+      - 'property "workflow_(repository|sha)" is not defined in object type'

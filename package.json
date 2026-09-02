@@ -2,6 +2,7 @@
   "name": "shared-actions",
   "type": "module",
   "version": "1.0.0",
+  "packageManager": "pnpm@11.8.0",
   "description": "",
   "author": "ricsy",
   "license": "MIT",
@@ -9,11 +10,20 @@
   ],
   "scripts": {
     "prepare": "pip install pre-commit && pre-commit install",
+    "repo-doctor": "node scripts/repo-doctor/cli.mjs",
+    "test": "vitest run",
     "lint": "npm-run-all2 lint:**",
     "lint:action": "github-actionlint"
   },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "execa": "^10.0.1",
+    "octokit": "^5.0.5",
+    "zod": "^4.5.4"
+  },
   "devDependencies": {
     "github-actionlint": "^1.7.12",
-    "npm-run-all2": "^8.0.4"
+    "npm-run-all2": "^8.0.4",
+    "vitest": "^4.1.11"
   }
 }

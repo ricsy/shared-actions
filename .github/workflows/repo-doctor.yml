@@ -7,6 +7,11 @@ on:
         description: Central repository that stores inspection issues.
         required: true
         type: string
+      runner:
+        description: Runner label used by all inspection jobs.
+        required: false
+        default: ubuntu-latest
+        type: string
       node_version:
         description: Node.js version used by project commands.
         required: true
@@ -41,7 +46,7 @@ permissions:
 
 jobs:
   preflight:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     outputs:
       mode: ${{ steps.preflight.outputs.mode }}
       result: ${{ steps.preflight.outputs.result }}
@@ -94,7 +99,7 @@ jobs:
   inspect:
     needs: preflight
     if: needs.preflight.outputs.mode != 'skip'
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     timeout-minutes: ${{ inputs.timeout_minutes }}
     outputs:
       result: ${{ steps.inspect.outputs.result }}
@@ -169,7 +174,7 @@ jobs:
   report:
     needs: [preflight, inspect]
     if: always() && needs.preflight.result == 'success' && needs.preflight.outputs.mode != 'skip'
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     steps:
       - name: Checkout helper
         uses: actions/checkout@v6

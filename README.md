@@ -64,6 +64,7 @@ jobs:
     uses: ricsy/shared-actions/.github/workflows/repo-doctor.yml@<40-character-commit-sha>
     with:
       results_repository: owner/repo-doctor
+      runner: ${{ vars.REPO_DOCTOR_RUNNER || 'ubuntu-latest' }}
       node_version: '24'
       pnpm_version: '11.8.0'
       command_plan: '[{"id":"lint","stage":"lint","executable":"pnpm","args":["run","lint"]}]'
@@ -77,6 +78,7 @@ jobs:
 | 输入 | 必需 | 说明 |
 | --- | --- | --- |
 | `results_repository` | 是 | 保存当前巡检状态的私有仓库 |
+| `runner` | 否 | 三个巡检 job 使用的 runner 标签，默认 `ubuntu-latest` |
 | `node_version` | 是 | 项目命令使用的 Node.js 版本 |
 | `pnpm_version` | 是 | 项目命令使用的 pnpm 版本 |
 | `command_plan` | 是 | repo-kit 生成的不可变 JSON 命令计划 |
@@ -89,6 +91,8 @@ jobs:
 | `COMMON_LIB_TOKEN` | repo-kit 与 shared-actions Contents read | preflight、repo-kit checkout |
 
 inspect 不接收 `REPO_DOCTOR_TOKEN`。两个 token 都不会传入 install、audit、lint、test、coverage 或 build，也不会持久化到 checkout。
+
+repo-kit 生成的调用方会读取仓库变量 `REPO_DOCTOR_RUNNER`；未设置时使用 `ubuntu-latest`。使用仓库级 self-hosted runner 时，将该变量设为 runner 的专用标签，例如 `repo-doctor`。
 
 #### 状态语义
 

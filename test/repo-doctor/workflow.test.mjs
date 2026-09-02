@@ -10,6 +10,8 @@ describe('repo-doctor reusable workflow', () => {
     expect(source).toContain('ref: ${{ job.workflow_sha }}')
     expect(source).toContain('--prod --frozen-lockfile --ignore-scripts')
     expect(source).not.toContain('actions/upload-artifact')
+    expect(source).toContain('default: ubuntu-latest')
+    expect(source.match(/runs-on: \$\{\{ inputs\.runner \}\}/gu)).toHaveLength(3)
     expect(inspect).not.toContain('REPO_DOCTOR_TOKEN')
     expect(inspect.match(/COMMON_LIB_TOKEN/gu)).toHaveLength(1)
     expect(inspect.match(/persist-credentials: false/gu)).toHaveLength(3)

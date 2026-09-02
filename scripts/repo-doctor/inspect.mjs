@@ -99,7 +99,7 @@ async function runProcess(command, input, execaImpl) {
     const result = await execaImpl(command.executable, command.args, {
       cwd: input.sourceRoot,
       shell: false,
-      stdio: 'inherit',
+      stdio: ['ignore', process.stderr, process.stderr],
       timeout: input.commandTimeoutMs,
       reject: false,
       windowsHide: true,

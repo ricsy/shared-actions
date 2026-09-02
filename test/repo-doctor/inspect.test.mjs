@@ -9,10 +9,22 @@ import {
 
 describe('repo-doctor inspect', () => {
   it('uses shell:false and keeps running after a quality failure', async () => {
-    const fake = spawnSequence([0, 0, 1, 0])
+    const fake = spawnSequence([0, 0, 0, 1, 0])
     const result = await runInspection(input(), { execaImpl: fake.execa })
 
-    expect(fake.calls.map(call => call.executable)).toEqual(['pnpm', 'node', 'pnpm', 'pnpm'])
+    expect(fake.calls.map(call => call.executable)).toEqual(['pnpm', 'pnpm', 'node', 'pnpm', 'pnpm'])
+    expect(fake.calls[0]).toMatchObject({
+      args: ['fetch', '--frozen-lockfile', '--ignore-scripts'],
+      options: {
+        env: {
+          GIT_CONFIG_COUNT: '1',
+          GIT_CONFIG_VALUE_0: 'https://github.com/',
+        },
+      },
+    })
+    expect(fake.calls[0].options.env.GIT_CONFIG_KEY_0).toContain('read-token')
+    expect(fake.calls[1].args).toEqual(['install', '--frozen-lockfile', '--offline'])
+    expect(JSON.stringify(fake.calls.slice(1))).not.toContain('read-token')
     expect(fake.calls.every(call => call.options.shell === false)).toBe(true)
     expect(fake.calls.every(call => call.options.stdio[1] === process.stderr && call.options.stdio[2] === process.stderr)).toBe(true)
     expect(result.status).toBe(InspectionStatus.Failed)
@@ -55,6 +67,7 @@ function input(overrides = {}) {
     sourceRoot: '.',
     repoKitCli: '.repo-doctor/repo-kit/dist/index.mjs',
     commandTimeoutMs: 60_000,
+    projectReadToken: 'read-token',
     commandPlan: [
       { id: 'install', stage: InspectionStage.Prepare, executable: 'pnpm', args: ['install', '--frozen-lockfile'] },
       { id: 'lint', stage: InspectionStage.Lint, executable: 'pnpm', args: ['run', 'lint'] },

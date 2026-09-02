@@ -88,9 +88,9 @@ jobs:
 | Secret | 最小权限 | 使用位置 |
 | --- | --- | --- |
 | `REPO_DOCTOR_TOKEN` | 结果仓库 Issues read/write | preflight、report |
-| `COMMON_LIB_TOKEN` | repo-kit 与 shared-actions Contents read | preflight、repo-kit checkout |
+| `COMMON_LIB_TOKEN` | repo-kit、shared-actions 与项目私有 Git 依赖 Contents read | preflight、repo-kit checkout、无脚本依赖抓取 |
 
-inspect 不接收 `REPO_DOCTOR_TOKEN`。两个 token 都不会传入 install、audit、lint、test、coverage 或 build，也不会持久化到 checkout。
+inspect 不接收 `REPO_DOCTOR_TOKEN`。`COMMON_LIB_TOKEN` 仅传给禁用生命周期脚本的 `pnpm fetch`，随后立即撤销，真正的 install 使用离线缓存；两个 token 都不会传入 audit、lint、test、coverage 或 build，也不会持久化到 checkout。
 
 repo-kit 生成的调用方会读取仓库变量 `REPO_DOCTOR_RUNNER`；未设置时使用 `ubuntu-latest`。使用仓库级 self-hosted runner 时，将该变量设为 runner 的专用标签，例如 `repo-doctor`。
 

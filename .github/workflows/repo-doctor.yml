@@ -38,7 +38,7 @@ on:
         description: Token with Issues access to the results repository.
         required: true
       COMMON_LIB_TOKEN:
-        description: Token with read access to repo-kit and shared-actions.
+        description: Token with read access to repo-kit, shared-actions, and private Git dependencies.
         required: true
 
 permissions:
@@ -157,6 +157,7 @@ jobs:
           INSPECTION_MODE: ${{ needs.preflight.outputs.mode }}
           COMMAND_TIMEOUT_MINUTES: ${{ inputs.timeout_minutes }}
           HELPER_NODE: ${{ steps.helper-runtime.outputs.node }}
+          PROJECT_READ_TOKEN: ${{ secrets.COMMON_LIB_TOKEN }}
         run: |
           set -euo pipefail
           input="$(node --input-type=module -e '
@@ -165,9 +166,11 @@ jobs:
               sourceRoot: process.env.GITHUB_WORKSPACE + "/source",
               repoKitCli: process.env.GITHUB_WORKSPACE + "/.repo-doctor/repo-kit/dist/index.mjs",
               commandTimeoutMs: Number(process.env.COMMAND_TIMEOUT_MINUTES) * 60_000,
+              projectReadToken: process.env.PROJECT_READ_TOKEN,
               commandPlan: JSON.parse(process.env.COMMAND_PLAN),
             }));
           ')"
+          unset PROJECT_READ_TOKEN
           result="$(printf '%s' "$input" | "$HELPER_NODE" .repo-doctor/shared-actions/scripts/repo-doctor/cli.mjs inspect)"
           echo "result=$result" >> "$GITHUB_OUTPUT"
 

@@ -19,6 +19,8 @@ describe('repo-doctor reusable workflow', () => {
     expect(inspect.match(/COMMON_LIB_TOKEN/gu)).toHaveLength(2)
     expect(inspect).toContain('projectReadToken: process.env.PROJECT_READ_TOKEN')
     expect(inspect).toContain('unset PROJECT_READ_TOKEN')
+    expect(inspect).toContain('- name: Enforce current inspection status')
+    expect(inspect).toContain('JSON.parse(process.env.INSPECTION_RESULT).status !== "passed"')
     expect(inspect.match(/persist-credentials: false/gu)).toHaveLength(3)
   })
 })

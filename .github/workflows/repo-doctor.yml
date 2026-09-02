@@ -173,6 +173,10 @@ jobs:
           unset PROJECT_READ_TOKEN
           result="$(printf '%s' "$input" | "$HELPER_NODE" .repo-doctor/shared-actions/scripts/repo-doctor/cli.mjs inspect)"
           echo "result=$result" >> "$GITHUB_OUTPUT"
+      - name: Enforce current inspection status
+        env:
+          INSPECTION_RESULT: ${{ steps.inspect.outputs.result }}
+        run: node --input-type=module -e 'if (JSON.parse(process.env.INSPECTION_RESULT).status !== "passed") process.exit(1)'
 
   report:
     needs: [preflight, inspect]

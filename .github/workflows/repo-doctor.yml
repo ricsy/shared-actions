@@ -150,6 +150,10 @@ jobs:
         with:
           version: ${{ inputs.pnpm_version }}
           dest: ${{ runner.temp }}/repo-doctor/pnpm-project
+      - name: Setup project shfmt
+        uses: mfinelli/setup-shfmt@e52fd78d3a9a28dcf46656d4729c5d76be40ac0e # v4.0.1
+        with:
+          shfmt-version: v3.14.0
       - name: Run inspection
         id: inspect
         env:

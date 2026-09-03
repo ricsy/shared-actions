@@ -48,6 +48,8 @@ jobs:
 
 对 pnpm 仓库执行版本感知的日常巡检。工作流按 `preflight → inspect → report` 分为三个 job：源码或标准版本没有变化时跳过；只有 repo-kit/shared-actions 变化时仅检查 standards；源码变化或手动强制时执行完整命令计划。
 
+`inspect` job 会安装固定版本的 `shfmt` 并加入 `PATH`，runner 镜像无需预装该工具。
+
 调用入口应由 repo-kit 生成，避免手写命令计划或遗漏固定 SHA：
 
 ```bash

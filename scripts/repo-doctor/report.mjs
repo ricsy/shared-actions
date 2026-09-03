@@ -4,11 +4,11 @@ import {
   checkSchema,
   InspectionStage,
   InspectionStatus,
+  managedStatusMarker,
   RepoDoctorError,
   RepoDoctorErrorCode,
   repoDoctorRunModeSchema,
   runSchema,
-  statusCommentMarker,
   statusDocumentSchema,
   validateStatusDocument,
 } from './protocol.mjs'
@@ -90,16 +90,16 @@ export function managedLabels(document) {
   })
 }
 
-/** 渲染同时面向人和机器消费的唯一受管状态评论。 */
-export function renderStatusComment(document) {
+/** 渲染同时面向人和机器消费的唯一受管状态正文。 */
+export function renderManagedStatus(document) {
   validateStatusDocument(document)
   const failedStages = managedLabels(document).filter(label => label.startsWith('stage:'))
   return [
-    statusCommentMarker,
+    managedStatusMarker,
     '',
     '## 当前状态',
     '',
-    `- Repository: \`${document.repository.fullName}\``,
+    `- Repository: \`${document.repository.fullName}@${document.repository.defaultBranch}\``,
     `- Overall: \`${document.overall}\``,
     `- Quality: \`${document.quality.status}\``,
     `- Standards: \`${document.standards.status}\``,
@@ -112,17 +112,15 @@ export function renderStatusComment(document) {
   ].join('\n')
 }
 
-/** 将状态写入唯一 Issue、唯一评论和受管 labels。 */
+/** 将状态写入唯一 Issue 正文和受管 labels。 */
 export async function runReport(input, client) {
   const document = buildStatusDocument(input)
   const foundIssue = await client.findInspectionIssue(input.resultsRepository, document.repository.id)
-  const issue = await client.upsertInspectionIssue(input.resultsRepository, document.repository, foundIssue)
-  const managed = await client.findManagedStatusComment(input.resultsRepository, issue.number)
-  const comment = await client.upsertManagedStatusComment(
+  const issue = await client.upsertInspectionIssue(
     input.resultsRepository,
-    issue.number,
-    renderStatusComment(document),
-    managed.comment,
+    document.repository,
+    foundIssue,
+    renderManagedStatus(document),
   )
   // repo-doctor 只管理 inspection/stage 前缀，人工添加的普通 labels 必须保留。
   const preserved = (issue.labels ?? [])
@@ -133,7 +131,7 @@ export async function runReport(input, client) {
     issue.number,
     [...preserved, ...managedLabels(document)],
   )
-  return { overall: document.overall, issueNumber: issue.number, commentId: comment?.id ?? null }
+  return { overall: document.overall, issueNumber: issue.number }
 }
 
 /** 构造单个质量域；incomplete 不推进 checkpoint，避免把未完成结果当成新基线。 */

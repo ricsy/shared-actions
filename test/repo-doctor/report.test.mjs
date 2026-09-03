@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest'
 import {
   buildStatusDocument,
   managedLabels,
-  renderStatusComment,
+  renderManagedStatus,
   runReport,
 } from '../../scripts/repo-doctor/report.mjs'
 import {
   InspectionStage,
   InspectionStatus,
-  parseStatusComment,
+  parseManagedStatus,
   RepoDoctorErrorCode,
   RepoDoctorRunMode,
 } from '../../scripts/repo-doctor/protocol.mjs'
@@ -31,7 +31,7 @@ describe('repo-doctor report', () => {
     expect(value.overall).toBe(expectedStatus)
     expect(value.quality.checkpoint.sourceSha).toBe(expectedCheckpoint.repeat(40))
     expect(value.standards.checkpoint.sourceSha).toBe(expectedCheckpoint.repeat(40))
-    expect(parseStatusComment(renderStatusComment(value))).toEqual(value)
+    expect(parseManagedStatus(renderManagedStatus(value))).toEqual(value)
   })
 
   it('preserves quality during standards-only and keeps every current failing stage label', () => {
@@ -57,13 +57,14 @@ describe('repo-doctor report', () => {
     ])
   })
 
-  it('upserts one managed comment and preserves non-managed labels', async () => {
+  it('stores the only managed status in the issue body and preserves non-managed labels', async () => {
     const calls = []
     const client = {
       findInspectionIssue: async () => ({ number: 7, labels: [{ name: 'team:platform' }, { name: 'inspection:passed' }] }),
-      upsertInspectionIssue: async (_repository, _source, issue) => issue,
-      findManagedStatusComment: async () => ({ comment: { id: 9, body: 'old' } }),
-      upsertManagedStatusComment: async (...args) => calls.push(['comment', ...args]),
+      upsertInspectionIssue: async (...args) => {
+        calls.push(['issue', ...args])
+        return args[2]
+      },
       replaceIssueLabels: async (...args) => calls.push(['labels', ...args]),
     }
 
@@ -75,7 +76,8 @@ describe('repo-doctor report', () => {
     }), client)
 
     expect(result.overall).toBe(InspectionStatus.Failed)
-    expect(calls[0][0]).toBe('comment')
+    expect(calls[0][0]).toBe('issue')
+    expect(calls[0][4]).toMatch(/- Repository: `acme\/widget@main`/u)
     expect(calls[1].at(-1)).toEqual(['team:platform', 'inspection:failed', 'stage:test'])
   })
 })

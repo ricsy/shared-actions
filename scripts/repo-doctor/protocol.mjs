@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
-/** 受管状态评论的唯一识别标记。 */
-export const statusCommentMarker = '<!-- repo-doctor-status:v1 -->'
+/** Issue 正文中受管状态的唯一识别标记。 */
+export const managedStatusMarker = '<!-- repo-doctor-status:v1 -->'
 
 /** 巡检阶段的稳定取值。 */
 export const InspectionStage = Object.freeze({
@@ -155,12 +155,12 @@ export function aggregateInspectionStatus(values) {
   return values.reduce((current, value) => statusPriority[value] > statusPriority[current] ? value : current)
 }
 
-/** 从唯一受管评论的 JSON code block 解析状态文档。 */
-export function parseStatusComment(body) {
+/** 从 Issue 正文的 JSON code block 解析受管状态文档。 */
+export function parseManagedStatus(body) {
   // marker 缺失或重复都会让受管状态边界不明确，必须拒绝解析。
-  if (typeof body !== 'string' || countOccurrences(body, statusCommentMarker) !== 1)
+  if (typeof body !== 'string' || countOccurrences(body, managedStatusMarker) !== 1)
     throw protocolError('Managed status marker is missing or duplicated.')
-  const markerIndex = body.indexOf(statusCommentMarker) + statusCommentMarker.length
+  const markerIndex = body.indexOf(managedStatusMarker) + managedStatusMarker.length
   const match = /```json\s*([\s\S]*?)```/u.exec(body.slice(markerIndex))
   if (match === null)
     throw protocolError('Managed status JSON block is missing.')
@@ -210,7 +210,7 @@ function sanitizeDetail(value) {
     .slice(0, 500)
 }
 
-/** 统计固定标记出现次数，用于保证受管评论只有一个解析入口。 */
+/** 统计固定标记出现次数，用于保证 Issue 正文只有一个状态解析入口。 */
 function countOccurrences(value, needle) {
   return value.split(needle).length - 1
 }

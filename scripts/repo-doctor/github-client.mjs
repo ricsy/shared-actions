@@ -1,10 +1,10 @@
 import { Octokit } from 'octokit'
 import {
   InspectionStage,
-  parseStatusComment,
+  managedStatusMarker,
+  parseManagedStatus,
   RepoDoctorError,
   RepoDoctorErrorCode,
-  statusCommentMarker,
 } from './protocol.mjs'
 
 /** 根据稳定的 GitHub repository ID 生成 Issue 身份标记。 */
@@ -54,11 +54,11 @@ export class GitHubClient {
     return matches[0] ?? null
   }
 
-  /** 创建巡检 Issue，或在仓库改名、转移时更新现有 Issue。 */
-  async upsertInspectionIssue(resultsRepository, repository, existingIssue) {
+  /** 创建巡检 Issue，或原位更新仓库身份与当前状态。 */
+  async upsertInspectionIssue(resultsRepository, repository, existingIssue, statusBody) {
     const { owner, repo } = repositoryParts(resultsRepository)
     const title = `[Doctor] 仓库巡检：${repository.fullName}`
-    const body = `${repositoryIdentityMarker(repository.id)}\n\n- Repository: \`${repository.fullName}\`\n- Default branch: \`${repository.defaultBranch}\``
+    const body = `${repositoryIdentityMarker(repository.id)}\n\n${statusBody}`
     if (existingIssue === null) {
       return this.request(() => this.octokit.rest.issues.create({ owner, repo, title, body }))
     }
@@ -67,35 +67,18 @@ export class GitHubClient {
     return this.request(() => this.octokit.rest.issues.update({ owner, repo, issue_number: existingIssue.number, title, body }))
   }
 
-  /** 查找并解析 Issue 中唯一的受管状态评论。 */
-  async findManagedStatusComment(resultsRepository, issueNumber) {
-    const { owner, repo } = repositoryParts(resultsRepository)
-    const comments = await this.paginate(this.octokit.rest.issues.listComments, { owner, repo, issue_number: issueNumber, per_page: 100 })
-    const matches = comments.filter(comment => typeof comment.body === 'string' && comment.body.includes(statusCommentMarker))
-    // 多条受管评论会让 checkpoint 来源不唯一，因此拒绝继续覆盖。
-    if (matches.length > 1)
-      throw stateConflict(this.stage, `Found ${matches.length} managed comments on issue ${issueNumber}.`)
-    if (matches.length === 0)
-      return { comment: null, status: null, invalid: false }
+  /** 从巡检 Issue 正文解析当前状态。 */
+  readInspectionStatus(issue) {
+    if (typeof issue?.body !== 'string' || !issue.body.includes(managedStatusMarker))
+      return { status: null, invalid: false }
     try {
-      return { comment: matches[0], status: parseStatusComment(matches[0].body), invalid: false }
+      return { status: parseManagedStatus(issue.body), invalid: false }
     }
     catch (error) {
       if (error instanceof RepoDoctorError && error.errorCode === RepoDoctorErrorCode.StateInvalid)
-        return { comment: matches[0], status: null, invalid: true }
+        return { status: null, invalid: true }
       throw error
     }
-  }
-
-  /** 创建或原位更新受管状态评论，避免每次巡检追加新评论。 */
-  async upsertManagedStatusComment(resultsRepository, issueNumber, body, existingComment) {
-    const { owner, repo } = repositoryParts(resultsRepository)
-    if (existingComment === null) {
-      return this.request(() => this.octokit.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body }))
-    }
-    if (existingComment.body === body)
-      return existingComment
-    return this.request(() => this.octokit.rest.issues.updateComment({ owner, repo, comment_id: existingComment.id, body }))
   }
 
   /** 用完整目标集合替换 Issue labels。 */

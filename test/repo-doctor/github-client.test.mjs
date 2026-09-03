@@ -4,9 +4,9 @@ import { GitHubClient, repositoryIdentityMarker } from '../../scripts/repo-docto
 import {
   InspectionStage,
   InspectionStatus,
+  managedStatusMarker,
   RepoDoctorErrorCode,
   RepoDoctorRunMode,
-  statusCommentMarker,
 } from '../../scripts/repo-doctor/protocol.mjs'
 
 describe('GitHubClient', () => {
@@ -34,32 +34,29 @@ describe('GitHubClient', () => {
       id: 42,
       fullName: 'acme/widget',
       defaultBranch: 'main',
-    }, issue)
+    }, issue, managedComment(InspectionStatus.Passed))
 
     expect(updated.number).toBe(7)
     expect(fixture.issues[0].title).toBe('[Doctor] 仓库巡检：acme/widget')
     expect(fixture.issues[0].body).toMatch(/repo-doctor-repository-id:42/u)
+    expect(fixture.issues[0].body).toMatch(/"overall":"passed"/u)
     expect(fixture.issues[0].state).toBe('closed')
     expect(fixture.lastIssuePatch).not.toHaveProperty('state')
   })
 
-  it('updates the only managed comment and preserves ordinary comments', async () => {
-    fixture.comments.push(
-      { id: 1, body: 'Human note' },
-      { id: 2, body: managedComment(InspectionStatus.Failed) },
-    )
+  it('reads the managed status from the issue body and detects damage', () => {
     const client = new GitHubClient({ token: 'result-token', baseUrl: fixture.baseUrl })
+    const issue = { body: `${repositoryIdentityMarker(42)}\n\n${managedComment(InspectionStatus.Failed)}` }
 
-    const managed = await client.findManagedStatusComment('ricsy/repo-doctor', 7)
-    await client.upsertManagedStatusComment('ricsy/repo-doctor', 7, managedComment(InspectionStatus.Passed), managed.comment)
+    const managed = client.readInspectionStatus(issue)
+    const invalid = client.readInspectionStatus({ body: `${managedStatusMarker}\n\ninvalid` })
 
     expect(managed.status.overall).toBe(InspectionStatus.Failed)
-    expect(fixture.comments.find(comment => comment.id === 1).body).toBe('Human note')
-    expect(fixture.comments.find(comment => comment.id === 2).body).toMatch(/"overall":"passed"/u)
-    expect(fixture.comments).toHaveLength(2)
+    expect(managed.invalid).toBe(false)
+    expect(invalid).toEqual({ status: null, invalid: true })
   })
 
-  it('rejects duplicate repository issues and managed comments', async () => {
+  it('rejects duplicate repository issues', async () => {
     fixture.issues.push(
       { number: 7, title: 'One', body: repositoryIdentityMarker(42), state: 'open' },
       { number: 8, title: 'Two', body: repositoryIdentityMarker(42), state: 'open' },
@@ -67,13 +64,6 @@ describe('GitHubClient', () => {
     const client = new GitHubClient({ token: 'result-token', baseUrl: fixture.baseUrl })
 
     await expect(client.findInspectionIssue('ricsy/repo-doctor', 42))
-      .rejects.toMatchObject({ errorCode: RepoDoctorErrorCode.StateConflict })
-
-    fixture.comments.push(
-      { id: 2, body: managedComment(InspectionStatus.Passed) },
-      { id: 3, body: managedComment(InspectionStatus.Failed) },
-    )
-    await expect(client.findManagedStatusComment('ricsy/repo-doctor', 7))
       .rejects.toMatchObject({ errorCode: RepoDoctorErrorCode.StateConflict })
   })
 })
@@ -95,11 +85,11 @@ function managedComment(status) {
     latestAttempt: { mode: RepoDoctorRunMode.Full, status, run },
     checks: [check],
   }
-  return `${statusCommentMarker}\n\n\`\`\`json\n${JSON.stringify(value)}\n\`\`\``
+  return `${managedStatusMarker}\n\n\`\`\`json\n${JSON.stringify(value)}\n\`\`\``
 }
 
 async function createGitHubFixture() {
-  const fixture = { issues: [], comments: [], lastIssuePatch: undefined }
+  const fixture = { issues: [], lastIssuePatch: undefined }
   const server = createServer(async (request, response) => {
     const body = await readJson(request)
     const url = new URL(request.url, 'http://localhost')
@@ -115,12 +105,6 @@ async function createGitHubFixture() {
       fixture.lastIssuePatch = body
       Object.assign(fixture.issues.find(issue => issue.number === 7), body)
       return json(response, 200, fixture.issues.find(issue => issue.number === 7))
-    }
-    if (request.method === 'GET' && url.pathname === '/repos/ricsy/repo-doctor/issues/7/comments')
-      return json(response, 200, fixture.comments)
-    if (request.method === 'PATCH' && url.pathname === '/repos/ricsy/repo-doctor/issues/comments/2') {
-      Object.assign(fixture.comments.find(comment => comment.id === 2), body)
-      return json(response, 200, fixture.comments.find(comment => comment.id === 2))
     }
     return json(response, 404, { message: 'not found' })
   })

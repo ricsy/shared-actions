@@ -3,17 +3,17 @@ import {
   aggregateInspectionStatus,
   InspectionStage,
   InspectionStatus,
-  parseStatusComment,
+  managedStatusMarker,
+  parseManagedStatus,
   RepoDoctorError,
   RepoDoctorErrorCode,
   RepoDoctorRunMode,
-  statusCommentMarker,
 } from '../../scripts/repo-doctor/protocol.mjs'
 
 describe('repo-doctor protocol', () => {
   it('parses the managed status boundary', () => {
     const document = statusDocument()
-    const parsed = parseStatusComment(`${statusCommentMarker}\n\nSummary\n\n\`\`\`json\n${JSON.stringify(document)}\n\`\`\``)
+    const parsed = parseManagedStatus(`${managedStatusMarker}\n\nSummary\n\n\`\`\`json\n${JSON.stringify(document)}\n\`\`\``)
 
     expect(parsed).toEqual(document)
     expect(parsed.latestAttempt.mode).toBe(RepoDoctorRunMode.Full)
@@ -23,7 +23,7 @@ describe('repo-doctor protocol', () => {
     const document = statusDocument()
     document.overall = 'unknown'
 
-    expect(() => parseStatusComment(`${statusCommentMarker}\n\`\`\`json\n${JSON.stringify(document)}\n\`\`\``))
+    expect(() => parseManagedStatus(`${managedStatusMarker}\n\`\`\`json\n${JSON.stringify(document)}\n\`\`\``))
       .toThrowError(expect.objectContaining({
         name: new RepoDoctorError({ errorCode: RepoDoctorErrorCode.StateInvalid }).name,
         errorCode: RepoDoctorErrorCode.StateInvalid,

@@ -62,11 +62,11 @@ export async function runPreflight(input, clients) {
   const sourceSha = await clients.sourceClient.getCommitSha(sourceRepository.fullName, sourceRepository.defaultBranch)
   const repoKitSha = await clients.standardsClient.getCommitSha(input.repoKitRepository, 'main')
   const sharedActionsSha = await clients.standardsClient.getCommitSha(input.sharedActionsRepository, 'main')
-  // 先按 repository ID 定位 Issue，再从唯一受管评论恢复 checkpoint。
+  // 先按 repository ID 定位 Issue，再从同一 Issue 正文恢复 checkpoint。
   const issue = await clients.resultsClient.findInspectionIssue(input.resultsRepository, sourceRepository.id)
   const managed = issue === null
-    ? { comment: null, status: null, invalid: false }
-    : await clients.resultsClient.findManagedStatusComment(input.resultsRepository, issue.number)
+    ? { status: null, invalid: false }
+    : clients.resultsClient.readInspectionStatus(issue)
   const mode = decideRunMode({
     force: input.force,
     previousStatus: managed.status,
@@ -82,9 +82,8 @@ export async function runPreflight(input, clients) {
     repoKitSha,
     sharedActionsSha,
     issueNumber: issue?.number ?? null,
-    commentId: managed.comment?.id ?? null,
     previousStatus: managed.status,
-    rebuildComment: managed.invalid,
+    rebuildStatus: managed.invalid,
   }
 }
 

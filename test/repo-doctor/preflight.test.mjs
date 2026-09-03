@@ -23,7 +23,7 @@ describe('repo-doctor preflight', () => {
     expect(decideRunMode({ force: true, previousStatus: status(), sourceSha, repoKitSha, sharedActionsSha })).toBe(RepoDoctorRunMode.Full)
   })
 
-  it('forces full and preserves the managed comment identity when its JSON is damaged', async () => {
+  it('forces full when the managed status in the issue body is damaged', async () => {
     const result = await runPreflight({
       sourceRepository: 'acme/widget',
       resultsRepository: 'ricsy/repo-doctor',
@@ -33,9 +33,8 @@ describe('repo-doctor preflight', () => {
     }, clients({ invalid: true }))
 
     expect(result.mode).toBe(RepoDoctorRunMode.Full)
-    expect(result.rebuildComment).toBe(true)
+    expect(result.rebuildStatus).toBe(true)
     expect(result.issueNumber).toBe(7)
-    expect(result.commentId).toBe(9)
     expect(result.previousStatus).toBeNull()
   })
 
@@ -61,9 +60,8 @@ function clients({ invalid = false } = {}) {
     },
     standardsClient: { getCommitSha: async () => repoKitSha },
     resultsClient: {
-      findInspectionIssue: async () => ({ number: 7 }),
-      findManagedStatusComment: async () => ({
-        comment: { id: 9 },
+      findInspectionIssue: async () => ({ number: 7, body: 'managed status' }),
+      readInspectionStatus: () => ({
         status: invalid ? null : status(),
         invalid,
       }),

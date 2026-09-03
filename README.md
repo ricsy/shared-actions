@@ -100,7 +100,7 @@ repo-kit 生成的调用方会读取仓库变量 `REPO_DOCTOR_RUNNER`；未设�
 - `failed`：检查完整执行但发现问题，推进对应 checkpoint，避免同一提交每日重复运行。
 - `incomplete`：准备、启动、超时、网络或协议失败，保留旧 checkpoint，下一次继续重试。
 
-每个源仓依据稳定 repository ID 对应一个 `[Doctor] 仓库巡检：owner/repo` Issue。工作流只更新一条带 `<!-- repo-doctor-status:v1 -->` 的受管评论和受管 labels，不新增历史状态评论、不删除人工评论，也不改变 Issue 的 open/closed 状态。完整日志保留在源仓 Actions run，可通过评论中的 run URL 或以下命令读取：
+每个源仓依据稳定 repository ID 对应一个 `[Doctor] 仓库巡检：owner/repo` Issue。工作流只更新带 `<!-- repo-doctor-status:v1 -->` 的 Issue 正文和受管 labels，不新增巡检评论、不删除人工评论，也不改变 Issue 的 open/closed 状态。正文以 `Repository: owner/repo@branch` 标识当前默认分支；完整日志保留在源仓 Actions run，可通过正文中的 run URL 或以下命令读取：
 
 ```bash
 gh run view <run-id> --repo <owner/repo> --log-failed
@@ -109,8 +109,8 @@ gh run view <run-id> --repo <owner/repo> --log-failed
 #### 恢复
 
 - preflight 提示 token 缺失或拒绝访问：修正两个 Secret 的仓库范围和最小权限后重新运行。
-- 唯一受管评论 JSON 损坏：下一次运行会执行 full 并原位重建。
-- 同一 repository ID 出现重复 Issue，或一个 Issue 出现多条受管评论：人工保留唯一实体后重新运行；工作流不会猜测、合并或删除。
+- Issue 正文中的受管状态标记或 JSON 损坏：下一次运行会执行 full 并原位重建正文。
+- 同一 repository ID 出现重复 Issue：人工保留唯一实体后重新运行；工作流不会猜测、合并或删除。
 - 新 shared-actions 版本异常：把调用方 `uses` 恢复到上一个已验证 SHA；不要改用浮动分支。
 
 维护 helper 时运行：

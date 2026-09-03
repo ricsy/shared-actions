@@ -14,7 +14,7 @@ describe('repo-doctor reusable workflow', () => {
     expect(shellCheckSetupIndex).toBeGreaterThan(-1)
     expect(inspect).toContain('uses: koki-develop/setup-shellcheck@85374637e5ec692980a3bdfbee58f14ed984a740 # v1.0.2')
     expect(inspect).toContain('version: 0.11.0')
-    expect(inspect).toContain('xvfb-run --auto-servernum "$HELPER_NODE" .repo-doctor/shared-actions/scripts/repo-doctor/cli.mjs inspect')
+    expect(inspect).toContain('xvfb-run --auto-servernum "$HELPER_NODE" .repo-doctor/shared-actions/scripts/repo-doctor/cli.mjs inspect | tee /dev/stderr | tail -n 1')
     expect(shfmtSetupIndex).toBeLessThan(inspect.indexOf('- name: Run inspection'))
     expect(shellCheckSetupIndex).toBeLessThan(inspect.indexOf('- name: Run inspection'))
   })

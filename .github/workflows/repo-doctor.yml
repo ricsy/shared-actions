@@ -180,7 +180,12 @@ jobs:
           ')"
           unset PROJECT_READ_TOKEN
           result="$(printf '%s' "$input" | xvfb-run --auto-servernum "$HELPER_NODE" .repo-doctor/shared-actions/scripts/repo-doctor/cli.mjs inspect)"
-          echo "result=$result" >> "$GITHUB_OUTPUT"
+          delimiter="repo_doctor_result_${RANDOM}_${RANDOM}"
+          {
+            echo "result<<$delimiter"
+            printf '%s\n' "$result"
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
       - name: Enforce current inspection status
         env:
           INSPECTION_RESULT: ${{ steps.inspect.outputs.result }}

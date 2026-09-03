@@ -162,7 +162,8 @@ async function runProcess(command, input, execaImpl, environment) {
       cwd: input.sourceRoot,
       ...(environment ? { env: environment } : {}),
       shell: false,
-      stdio: ['ignore', process.stderr, process.stderr],
+      // 直接复制 stderr 文件描述符，避免外层命令替换误捕获项目命令输出并污染 JSON 协议。
+      stdio: ['ignore', 2, 2],
       timeout: input.commandTimeoutMs,
       reject: false,
       windowsHide: true,

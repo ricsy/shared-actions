@@ -17,7 +17,7 @@ describe('repo-doctor inspect', () => {
 
     expect(fake.calls.map(call => call.executable)).toEqual(['pnpm', 'node', 'pnpm', 'pnpm'])
     expect(fake.calls.every(call => call.options.shell === false)).toBe(true)
-    expect(fake.calls.every(call => call.options.stdio[1] === process.stderr && call.options.stdio[2] === process.stderr)).toBe(true)
+    expect(fake.calls.every(call => call.options.stdio[1] === 2 && call.options.stdio[2] === 2)).toBe(true)
     expect(result.status).toBe(InspectionStatus.Failed)
     expect(result.checks.map(check => [check.command, check.status])).toEqual([
       ['install', InspectionStatus.Passed],

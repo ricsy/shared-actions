@@ -2,15 +2,21 @@ import { readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
 
 describe('repo-doctor reusable workflow', () => {
-  it('installs shfmt before running project inspection', async () => {
+  it('installs shell tooling before running project inspection', async () => {
     const source = await readFile('.github/workflows/repo-doctor.yml', 'utf8')
     const inspect = source.slice(source.indexOf('\n  inspect:'), source.indexOf('\n  report:'))
-    const setupIndex = inspect.indexOf('- name: Setup project shfmt')
+    const shfmtSetupIndex = inspect.indexOf('- name: Setup project shfmt')
+    const shellCheckSetupIndex = inspect.indexOf('- name: Setup project ShellCheck')
 
-    expect(setupIndex).toBeGreaterThan(-1)
+    expect(shfmtSetupIndex).toBeGreaterThan(-1)
     expect(inspect).toContain('uses: mfinelli/setup-shfmt@e52fd78d3a9a28dcf46656d4729c5d76be40ac0e # v4.0.1')
     expect(inspect).toContain('shfmt-version: 3.14.0')
-    expect(setupIndex).toBeLessThan(inspect.indexOf('- name: Run inspection'))
+    expect(shellCheckSetupIndex).toBeGreaterThan(-1)
+    expect(inspect).toContain('uses: koki-develop/setup-shellcheck@85374637e5ec692980a3bdfbee58f14ed984a740 # v1.0.2')
+    expect(inspect).toContain('version: 0.11.0')
+    expect(inspect).toContain('xvfb-run --auto-servernum "$HELPER_NODE" .repo-doctor/shared-actions/scripts/repo-doctor/cli.mjs inspect')
+    expect(shfmtSetupIndex).toBeLessThan(inspect.indexOf('- name: Run inspection'))
+    expect(shellCheckSetupIndex).toBeLessThan(inspect.indexOf('- name: Run inspection'))
   })
 
   it('reports setup failures without advancing either checkpoint', async () => {

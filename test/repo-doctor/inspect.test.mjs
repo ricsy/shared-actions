@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -27,7 +27,7 @@ describe('repo-doctor inspect', () => {
     ])
   })
 
-  it('mirrors GitHub dependencies with a token before running install without it', async () => {
+  it('mirrors GitHub dependencies from root and nested lockfiles before running install without the token', async () => {
     const root = await mkdtemp(join(tmpdir(), 'repo-doctor-inspect-'))
     try {
       await writeFile(join(root, 'pnpm-lock.yaml'), `lockfileVersion: '9.0'
@@ -35,17 +35,25 @@ packages:
   agentlint@git:
     resolution: {commit: abc123, repo: https://github.com/example/agentlint.git, type: git}
 `)
-      const fake = spawnSequence([0, 0, 0, 0])
+      await mkdir(join(root, 'apps', 'desktop'), { recursive: true })
+      await writeFile(join(root, 'apps', 'desktop', 'pnpm-lock.yaml'), `lockfileVersion: '9.0'
+packages:
+  harness@git:
+    resolution: {commit: def456, repo: https://github.com/example/harness.git, type: git}
+`)
+      const fake = spawnSequence([0, 0, 0, 0, 0, 0])
       await runInspection(input({
         sourceRoot: root,
         commandPlan: [input().commandPlan[0]],
       }), { execaImpl: fake.execa })
 
-      expect(fake.calls.map(call => call.executable)).toEqual(['git', 'git', 'pnpm', 'node'])
+      expect(fake.calls.map(call => call.executable)).toEqual(['git', 'git', 'git', 'git', 'pnpm', 'node'])
       expect(fake.calls[1].options.env.GIT_CONFIG_KEY_0).toContain('read-token')
-      expect(fake.calls[2].options.env.GIT_CONFIG_KEY_0).toContain('file:')
-      expect(JSON.stringify(fake.calls.slice(2))).not.toContain('read-token')
-      expect(fake.calls[2].args).toEqual(['install', '--frozen-lockfile', '--force'])
+      expect(fake.calls[3].options.env.GIT_CONFIG_KEY_0).toContain('read-token')
+      expect(fake.calls[4].options.env.GIT_CONFIG_KEY_0).toContain('file:')
+      expect(fake.calls[4].options.env.GIT_CONFIG_KEY_1).toContain('file:')
+      expect(JSON.stringify(fake.calls.slice(4))).not.toContain('read-token')
+      expect(fake.calls[4].args).toEqual(['install', '--frozen-lockfile', '--force'])
     }
     finally {
       await rm(root, { recursive: true, force: true })

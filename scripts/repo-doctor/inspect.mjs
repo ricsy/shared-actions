@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -71,7 +71,7 @@ async function runPrepare(command, input, dependencies) {
   const startedAt = dependencies.now()
   let mirrorRoot
   try {
-    const repositories = await readGitRepositories(join(input.sourceRoot, 'pnpm-lock.yaml'))
+    const repositories = await readGitRepositories(await findPnpmLockfiles(input.sourceRoot))
     if (repositories.length === 0)
       return runCommand(command, input, dependencies, true)
 
@@ -188,21 +188,38 @@ function gitReadEnvironment(token) {
   }
 }
 
-/** 从 pnpm lockfile 收集需要认证的 GitHub HTTPS 仓库和提交。 */
-async function readGitRepositories(lockfilePath) {
-  const lockfile = parseYaml(await readFile(lockfilePath, 'utf8'))
-  const repositories = new Map()
-  for (const value of Object.values(lockfile?.packages ?? {})) {
-    const { resolution } = value ?? {}
-    if (resolution?.type !== 'git'
-      || typeof resolution.repo !== 'string'
-      || !resolution.repo.startsWith('https://github.com/')
-      || typeof resolution.commit !== 'string') {
-      continue
+/** 查找项目内的独立 pnpm workspace lockfile，并跳过依赖和 Git 元数据目录。 */
+async function findPnpmLockfiles(root) {
+  const lockfiles = []
+  async function visit(directory) {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      if (entry.isDirectory() && entry.name !== '.git' && entry.name !== 'node_modules')
+        await visit(join(directory, entry.name))
+      else if (entry.isFile() && entry.name === 'pnpm-lock.yaml')
+        lockfiles.push(join(directory, entry.name))
     }
-    const commits = repositories.get(resolution.repo) ?? new Set()
-    commits.add(resolution.commit)
-    repositories.set(resolution.repo, commits)
+  }
+  await visit(root)
+  return lockfiles.sort()
+}
+
+/** 从所有 pnpm lockfile 收集需要认证的 GitHub HTTPS 仓库和提交。 */
+async function readGitRepositories(lockfilePaths) {
+  const repositories = new Map()
+  for (const lockfilePath of lockfilePaths) {
+    const lockfile = parseYaml(await readFile(lockfilePath, 'utf8'))
+    for (const value of Object.values(lockfile?.packages ?? {})) {
+      const { resolution } = value ?? {}
+      if (resolution?.type !== 'git'
+        || typeof resolution.repo !== 'string'
+        || !resolution.repo.startsWith('https://github.com/')
+        || typeof resolution.commit !== 'string') {
+        continue
+      }
+      const commits = repositories.get(resolution.repo) ?? new Set()
+      commits.add(resolution.commit)
+      repositories.set(resolution.repo, commits)
+    }
   }
   return [...repositories].map(([url, commits]) => ({ url, commits: [...commits] }))
 }

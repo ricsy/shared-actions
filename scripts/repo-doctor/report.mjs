@@ -13,6 +13,17 @@ import {
   validateStatusDocument,
 } from './protocol.mjs'
 
+const statusHeadingByStatus = {
+  [InspectionStatus.Passed]: '✅ 巡检通过',
+  [InspectionStatus.Failed]: '❌ 巡检失败',
+  [InspectionStatus.Incomplete]: '⚠️ 巡检未完成',
+}
+const inspectionTimestampFormatter = new Intl.DateTimeFormat('sv-SE', {
+  dateStyle: 'short',
+  timeStyle: 'medium',
+  timeZone: 'Asia/Shanghai',
+})
+
 const shaSchema = z.string().regex(/^[a-f0-9]{40}$/u)
 const reportInputSchema = z.object({
   resultsRepository: z.string().regex(/^[^/\s]+\/[^/\s]+$/u),
@@ -77,7 +88,7 @@ export function buildStatusDocument(rawInput) {
 }
 
 /** 渲染同时面向人和机器消费的唯一受管状态正文。 */
-export function renderManagedStatus(document) {
+export function renderManagedStatus(document, updatedAt = new Date()) {
   validateStatusDocument(document)
   const failedStages = [...new Set([...document.quality.checks, ...document.standards.checks]
     .filter(check => check.status !== InspectionStatus.Passed)
@@ -85,7 +96,7 @@ export function renderManagedStatus(document) {
   return [
     managedStatusMarker,
     '',
-    '## 当前状态',
+    `## ${statusHeadingByStatus[document.overall]} · ${inspectionTimestampFormatter.format(updatedAt)}`,
     '',
     `- Repository: \`${document.repository.fullName}@${document.repository.defaultBranch}\``,
     `- Overall: \`${document.overall}\``,

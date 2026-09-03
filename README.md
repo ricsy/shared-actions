@@ -48,7 +48,7 @@ jobs:
 
 对 pnpm 仓库执行版本感知的日常巡检。工作流按 `preflight → inspect → report` 分为三个 job：源码或标准版本没有变化时跳过；只有 repo-kit/shared-actions 变化时仅检查 standards；源码变化或手动强制时执行完整命令计划。
 
-`inspect` job 会安装固定版本的 `shfmt` 并加入 `PATH`，runner 镜像无需预装该工具。
+`inspect` job 会安装固定版本的 `shfmt` 与 `ShellCheck` 并加入 `PATH`，runner 镜像无需预装这两个工具。
 
 调用入口应由 repo-kit 生成，避免手写命令计划或遗漏固定 SHA：
 
@@ -94,7 +94,7 @@ jobs:
 
 inspect 不接收 `REPO_DOCTOR_TOKEN`。`COMMON_LIB_TOKEN` 仅传给不执行项目代码的 Git bare mirror 抓取，随后立即撤销；install 将 lockfile 中的 GitHub URL 映射到无凭证本地镜像，并强制刷新可能由旧运行留下的 Git 包缓存，因此依赖生命周期脚本可正常执行但无法读取 token。两个 token 都不会传入 audit、lint、test、coverage 或 build，也不会持久化到 checkout。
 
-repo-kit 生成的调用方会读取仓库变量 `REPO_DOCTOR_RUNNER`；未设置时使用 `ubuntu-latest`。使用仓库级 self-hosted runner 时，将该变量设为 runner 的专用标签，例如 `repo-doctor`。
+repo-kit 生成的调用方会读取仓库变量 `REPO_DOCTOR_RUNNER`；未设置时使用 `ubuntu-latest`。使用仓库级 self-hosted runner 时，将该变量设为 runner 的专用标签，例如 `repo-doctor`。runner 必须提供 `Xvfb` 及项目测试依赖的系统运行库；工作流通过 `xvfb-run` 为巡检命令提供虚拟显示环境。
 
 #### 状态语义
 
@@ -102,7 +102,7 @@ repo-kit 生成的调用方会读取仓库变量 `REPO_DOCTOR_RUNNER`；未设�
 - `failed`：检查完整执行但发现问题，推进对应 checkpoint，避免同一提交每日重复运行。
 - `incomplete`：准备、启动、超时、网络或协议失败，保留旧 checkpoint，下一次继续重试。
 
-每个源仓依据稳定 repository ID 对应一个 `[Doctor] 仓库巡检：owner/repo` Issue。工作流只更新带 `<!-- repo-doctor-status:v1 -->` 的 Issue 正文，不新增巡检评论、不修改 labels、不删除人工评论，也不改变 Issue 的 open/closed 状态。正文以 `Repository: owner/repo@branch` 标识当前默认分支；完整日志保留在源仓 Actions run，可通过正文中的 run URL 或以下命令读取：
+每个源仓依据稳定 repository ID 对应一个 `[Doctor] 仓库巡检：owner/repo` Issue。工作流只更新带 `<!-- repo-doctor-status:v1 -->` 的 Issue 正文，不新增巡检评论、不修改 labels、不删除人工评论，也不改变 Issue 的 open/closed 状态。正文标题以 `## <状态图标> <状态文案> · YYYY-MM-DD HH:mm:ss` 展示巡检结果和 `Asia/Shanghai` 更新时间，并以 `Repository: owner/repo@branch` 标识当前默认分支；完整日志保留在源仓 Actions run，可通过正文中的 run URL 或以下命令读取：
 
 ```bash
 gh run view <run-id> --repo <owner/repo> --log-failed

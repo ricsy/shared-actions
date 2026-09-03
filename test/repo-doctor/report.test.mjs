@@ -14,10 +14,10 @@ import {
 
 describe('repo-doctor report', () => {
   it.each([
-    [InspectionStatus.Passed, InspectionStatus.Passed, 'b'],
-    [InspectionStatus.Failed, InspectionStatus.Failed, 'b'],
-    [InspectionStatus.Incomplete, InspectionStatus.Incomplete, 'a'],
-  ])('records %s and advances checkpoints only for completed attempts', (checkStatus, expectedStatus, expectedCheckpoint) => {
+    [InspectionStatus.Passed, InspectionStatus.Passed, 'b', '✅ 巡检通过'],
+    [InspectionStatus.Failed, InspectionStatus.Failed, 'b', '❌ 巡检失败'],
+    [InspectionStatus.Incomplete, InspectionStatus.Incomplete, 'a', '⚠️ 巡检未完成'],
+  ])('records %s and advances checkpoints only for completed attempts', (checkStatus, expectedStatus, expectedCheckpoint, expectedHeading) => {
     const value = buildStatusDocument(input({
       previousStatus: previousStatus('a'),
       inspection: inspection([
@@ -30,7 +30,9 @@ describe('repo-doctor report', () => {
     expect(value.overall).toBe(expectedStatus)
     expect(value.quality.checkpoint.sourceSha).toBe(expectedCheckpoint.repeat(40))
     expect(value.standards.checkpoint.sourceSha).toBe(expectedCheckpoint.repeat(40))
-    expect(parseManagedStatus(renderManagedStatus(value))).toEqual(value)
+    const rendered = renderManagedStatus(value, new Date('2026-09-03T05:07:06Z'))
+    expect(rendered).toContain(`## ${expectedHeading} · 2026-09-03 13:07:06`)
+    expect(parseManagedStatus(rendered)).toEqual(value)
   })
 
   it('preserves quality during standards-only and renders every current failing stage', () => {

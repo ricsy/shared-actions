@@ -154,6 +154,10 @@ jobs:
         uses: mfinelli/setup-shfmt@e52fd78d3a9a28dcf46656d4729c5d76be40ac0e # v4.0.1
         with:
           shfmt-version: 3.14.0
+      - name: Setup project ShellCheck
+        uses: koki-develop/setup-shellcheck@85374637e5ec692980a3bdfbee58f14ed984a740 # v1.0.2
+        with:
+          version: 0.11.0
       - name: Run inspection
         id: inspect
         env:
@@ -175,7 +179,7 @@ jobs:
             }));
           ')"
           unset PROJECT_READ_TOKEN
-          result="$(printf '%s' "$input" | "$HELPER_NODE" .repo-doctor/shared-actions/scripts/repo-doctor/cli.mjs inspect)"
+          result="$(printf '%s' "$input" | xvfb-run --auto-servernum "$HELPER_NODE" .repo-doctor/shared-actions/scripts/repo-doctor/cli.mjs inspect)"
           echo "result=$result" >> "$GITHUB_OUTPUT"
       - name: Enforce current inspection status
         env:

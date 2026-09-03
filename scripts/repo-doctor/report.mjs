@@ -76,24 +76,12 @@ export function buildStatusDocument(rawInput) {
   })
 }
 
-/** 根据整体状态和未通过阶段生成完整受管 label 集合。 */
-export function managedLabels(document) {
-  const stages = [...document.quality.checks, ...document.standards.checks]
-    .filter(check => check.status !== InspectionStatus.Passed)
-    .map(check => `stage:${check.stage}`)
-  return [`inspection:${document.overall}`, ...new Set(stages)].sort((left, right) => {
-    if (left.startsWith('inspection:'))
-      return -1
-    if (right.startsWith('inspection:'))
-      return 1
-    return left.localeCompare(right)
-  })
-}
-
 /** 渲染同时面向人和机器消费的唯一受管状态正文。 */
 export function renderManagedStatus(document) {
   validateStatusDocument(document)
-  const failedStages = managedLabels(document).filter(label => label.startsWith('stage:'))
+  const failedStages = [...new Set([...document.quality.checks, ...document.standards.checks]
+    .filter(check => check.status !== InspectionStatus.Passed)
+    .map(check => `stage:${check.stage}`))].sort()
   return [
     managedStatusMarker,
     '',
@@ -104,7 +92,7 @@ export function renderManagedStatus(document) {
     `- Quality: \`${document.quality.status}\``,
     `- Standards: \`${document.standards.status}\``,
     `- Latest run: [${document.latestAttempt.run.id}](${document.latestAttempt.run.url}) (attempt ${document.latestAttempt.run.attempt})`,
-    `- Failed stages: ${failedStages.length === 0 ? 'none' : failedStages.map(label => `\`${label}\``).join(', ')}`,
+    `- Failed stages: ${failedStages.length === 0 ? 'none' : failedStages.map(stage => `\`${stage}\``).join(', ')}`,
     '',
     '```json',
     JSON.stringify(document, null, 2),
@@ -112,7 +100,7 @@ export function renderManagedStatus(document) {
   ].join('\n')
 }
 
-/** 将状态写入唯一 Issue 正文和受管 labels。 */
+/** 将状态写入唯一 Issue 正文。 */
 export async function runReport(input, client) {
   const document = buildStatusDocument(input)
   const foundIssue = await client.findInspectionIssue(input.resultsRepository, document.repository.id)
@@ -121,15 +109,6 @@ export async function runReport(input, client) {
     document.repository,
     foundIssue,
     renderManagedStatus(document),
-  )
-  // repo-doctor 只管理 inspection/stage 前缀，人工添加的普通 labels 必须保留。
-  const preserved = (issue.labels ?? [])
-    .map(label => typeof label === 'string' ? label : label.name)
-    .filter(label => typeof label === 'string' && !isManagedLabel(label))
-  await client.replaceIssueLabels(
-    input.resultsRepository,
-    issue.number,
-    [...preserved, ...managedLabels(document)],
   )
   return { overall: document.overall, issueNumber: issue.number }
 }
@@ -151,11 +130,6 @@ function parseInput(value) {
   if (!result.success)
     throw invalidInput(result.error.issues[0]?.message ?? 'Report input is invalid.')
   return result.data
-}
-
-/** 判断 label 是否属于 repo-doctor 管理范围。 */
-function isManagedLabel(label) {
-  return label.startsWith('inspection:') || label.startsWith('stage:')
 }
 
 /** 创建 report 阶段的输入错误。 */

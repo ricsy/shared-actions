@@ -102,7 +102,7 @@ repo-kit 生成的调用方会读取仓库变量 `REPO_DOCTOR_RUNNER`；未设�
 - `failed`：检查完整执行但发现问题，推进对应 checkpoint，避免同一提交每日重复运行。
 - `incomplete`：准备、启动、超时、网络或协议失败，保留旧 checkpoint，下一次继续重试。
 
-每个源仓依据稳定 repository ID 对应一个 `[Doctor] 仓库巡检：owner/repo` Issue。工作流只更新带 `<!-- repo-doctor-status:v1 -->` 的 Issue 正文和受管 labels，不新增巡检评论、不删除人工评论，也不改变 Issue 的 open/closed 状态。正文以 `Repository: owner/repo@branch` 标识当前默认分支；完整日志保留在源仓 Actions run，可通过正文中的 run URL 或以下命令读取：
+每个源仓依据稳定 repository ID 对应一个 `[Doctor] 仓库巡检：owner/repo` Issue。工作流只更新带 `<!-- repo-doctor-status:v1 -->` 的 Issue 正文，不新增巡检评论、不修改 labels、不删除人工评论，也不改变 Issue 的 open/closed 状态。正文以 `Repository: owner/repo@branch` 标识当前默认分支；完整日志保留在源仓 Actions run，可通过正文中的 run URL 或以下命令读取：
 
 ```bash
 gh run view <run-id> --repo <owner/repo> --log-failed

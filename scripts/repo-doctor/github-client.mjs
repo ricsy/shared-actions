@@ -81,12 +81,6 @@ export class GitHubClient {
     }
   }
 
-  /** 用完整目标集合替换 Issue labels。 */
-  async replaceIssueLabels(resultsRepository, issueNumber, labels) {
-    const { owner, repo } = repositoryParts(resultsRepository)
-    return this.request(() => this.octokit.rest.issues.setLabels({ owner, repo, issue_number: issueNumber, labels }))
-  }
-
   /** 执行 Octokit 分页请求并校验列表响应。 */
   async paginate(route, parameters) {
     try {

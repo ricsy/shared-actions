@@ -9,8 +9,19 @@ describe('repo-doctor reusable workflow', () => {
 
     expect(setupIndex).toBeGreaterThan(-1)
     expect(inspect).toContain('uses: mfinelli/setup-shfmt@e52fd78d3a9a28dcf46656d4729c5d76be40ac0e # v4.0.1')
-    expect(inspect).toContain('shfmt-version: v3.14.0')
+    expect(inspect).toContain('shfmt-version: 3.14.0')
     expect(setupIndex).toBeLessThan(inspect.indexOf('- name: Run inspection'))
+  })
+
+  it('reports setup failures without advancing either checkpoint', async () => {
+    const source = await readFile('.github/workflows/repo-doctor.yml', 'utf8')
+    const report = source.slice(source.indexOf('\n  report:'))
+
+    expect(report).toContain('stage: "standards"')
+    expect(report).toContain('command: "standards"')
+    expect(report).toContain('...(preflight.mode === "full" ? [{')
+    expect(report).toContain('stage: "prepare"')
+    expect(report).toContain('errorCode: "INSPECTION_RESULT_MISSING"')
   })
 
   it('isolates credentials and checks out helper code from the called workflow revision', async () => {

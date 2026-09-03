@@ -153,7 +153,7 @@ jobs:
       - name: Setup project shfmt
         uses: mfinelli/setup-shfmt@e52fd78d3a9a28dcf46656d4729c5d76be40ac0e # v4.0.1
         with:
-          shfmt-version: v3.14.0
+          shfmt-version: 3.14.0
       - name: Run inspection
         id: inspect
         env:
@@ -228,13 +228,22 @@ jobs:
               inspection = {
                 mode: preflight.mode,
                 status: "incomplete",
-                checks: [{
-                  stage: "prepare",
-                  command: "inspect",
-                  status: "incomplete",
-                  durationMs: 0,
-                  errorCode: "INSPECTION_RESULT_MISSING",
-                }],
+                checks: [
+                  {
+                    stage: "standards",
+                    command: "standards",
+                    status: "incomplete",
+                    durationMs: 0,
+                    errorCode: "INSPECTION_RESULT_MISSING",
+                  },
+                  ...(preflight.mode === "full" ? [{
+                    stage: "prepare",
+                    command: "inspect",
+                    status: "incomplete",
+                    durationMs: 0,
+                    errorCode: "INSPECTION_RESULT_MISSING",
+                  }] : []),
+                ],
               };
             }
             process.stdout.write(JSON.stringify({

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { execa } from 'execa'
-import { parse as parseYaml } from 'yaml'
+import { parseAllDocuments } from 'yaml'
 import { z } from 'zod'
 import {
   aggregateInspectionStatus,
@@ -208,8 +208,15 @@ async function findPnpmLockfiles(root) {
 async function readGitRepositories(lockfilePaths) {
   const repositories = new Map()
   for (const lockfilePath of lockfilePaths) {
-    const lockfile = parseYaml(await readFile(lockfilePath, 'utf8'))
-    for (const value of Object.values(lockfile?.packages ?? {})) {
+    // pnpm 12 的 lockfile 是多文档 YAML：先是记录 pnpm 自身的文档，再是项目依赖文档。
+    const packages = parseAllDocuments(await readFile(lockfilePath, 'utf8'))
+      .flatMap((document) => {
+        // parseAllDocuments 不抛错，语法错误需自行抛出，避免静默跳过 git 依赖镜像。
+        if (document.errors.length > 0)
+          throw document.errors[0]
+        return Object.values(document.toJS()?.packages ?? {})
+      })
+    for (const value of packages) {
       const { resolution } = value ?? {}
       if (resolution?.type !== 'git'
         || typeof resolution.repo !== 'string'

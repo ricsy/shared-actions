@@ -36,7 +36,15 @@ packages:
     resolution: {commit: abc123, repo: https://github.com/example/agentlint.git, type: git}
 `)
       await mkdir(join(root, 'apps', 'desktop'), { recursive: true })
-      await writeFile(join(root, 'apps', 'desktop', 'pnpm-lock.yaml'), `lockfileVersion: '9.0'
+      // 嵌套 lockfile 用 pnpm 12 的多文档格式：依赖在第二个文档。
+      await writeFile(join(root, 'apps', 'desktop', 'pnpm-lock.yaml'), `---
+lockfileVersion: '9.0'
+importers:
+  .:
+    packageManagerDependencies:
+      pnpm: {specifier: 12.18.0, version: 12.18.0}
+---
+lockfileVersion: '9.0'
 packages:
   harness@git:
     resolution: {commit: def456, repo: https://github.com/example/harness.git, type: git}

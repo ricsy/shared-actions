@@ -8,11 +8,11 @@
   "license": "MIT",
   "keywords": [],
   "scripts": {
-    "prepare": "pip install pre-commit && pre-commit install",
     "repo-doctor": "node scripts/repo-doctor/cli.mjs",
     "test": "vitest run",
     "lint": "npm-run-all2 lint:**",
-    "lint:action": "github-actionlint"
+    "lint:action": "github-actionlint",
+    "setup:hooks": "uv tool install --upgrade pre-commit && uvx pre-commit install --hook-type pre-commit --hook-type post-commit --hook-type pre-push"
   },
   "dependencies": {
     "commander": "^15.0.0",

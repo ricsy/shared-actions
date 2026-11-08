@@ -69,7 +69,7 @@ jobs:
       - name: Setup helper pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 11.8.0
+          version: 12.18.0
           dest: ${{ runner.temp }}/repo-doctor/pnpm-helper
       - name: Install helper dependencies
         run: pnpm --dir .repo-doctor/shared-actions install --prod --frozen-lockfile --ignore-scripts
@@ -136,7 +136,7 @@ jobs:
       - name: Setup helper pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 11.8.0
+          version: 12.18.0
           dest: ${{ runner.temp }}/repo-doctor/pnpm-helper
       - name: Install helper dependencies
         run: pnpm --dir .repo-doctor/shared-actions install --prod --frozen-lockfile --ignore-scripts
@@ -211,7 +211,7 @@ jobs:
       - name: Setup helper pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 11.8.0
+          version: 12.18.0
           dest: ${{ runner.temp }}/repo-doctor/pnpm-helper
       - name: Install helper dependencies
         run: pnpm --dir .repo-doctor/shared-actions install --prod --frozen-lockfile --ignore-scripts

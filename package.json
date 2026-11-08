@@ -2,7 +2,7 @@
   "name": "shared-actions",
   "type": "module",
   "version": "1.0.0",
-  "packageManager": "pnpm@11.8.0",
+  "packageManager": "pnpm@12.18.0",
   "description": "",
   "author": "ricsy",
   "license": "MIT",

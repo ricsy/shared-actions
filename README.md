@@ -68,7 +68,7 @@ jobs:
       results_repository: owner/repo-doctor
       runner: ${{ vars.REPO_DOCTOR_RUNNER || 'ubuntu-latest' }}
       node_version: '24'
-      pnpm_version: '11.8.0'
+      pnpm_version: '12.18.0'
       command_plan: '[{"id":"lint","stage":"lint","executable":"pnpm","args":["run","lint"]}]'
       timeout_minutes: 60
       force: false

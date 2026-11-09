@@ -87,7 +87,6 @@ jobs:
     with:
       results_repository: owner/repo-doctor
       runner: ${{ vars.REPO_DOCTOR_RUNNER || 'ubuntu-latest' }}
-      pnpm_version: '12.18.0'
       command_plan: '[{"id":"lint","stage":"lint","executable":"pnpm","args":["run","lint"]}]'
       timeout_minutes: 60
       force: false
@@ -101,7 +100,7 @@ jobs:
 | `results_repository` | 是 | 保存当前巡检状态的私有仓库 |
 | `runner` | 否 | 三个巡检 job 使用的 runner 标签，默认 `ubuntu-latest` |
 | `node_version` | 否 | 显式指定项目命令的 Node.js 版本；留空时由 [setup-node](#actionssetup-node) 从源码 `package.json` 的 `engines.node` 推导。repo-kit 只在项目用 `volta.node`、`.node-version`、`.nvmrc` 或 `--node-version` 显式指定时写入 |
-| `pnpm_version` | 是 | 项目命令使用的 pnpm 版本 |
+| `pnpm_version` | 否 | 显式指定项目命令的 pnpm 版本；留空时由 `pnpm/action-setup` 读取源码 `package.json` 的 `packageManager`。与 `packageManager` 不一致时步骤直接失败 |
 | `command_plan` | 是 | repo-kit 生成的不可变 JSON 命令计划 |
 | `timeout_minutes` | 是 | inspect job 的超时分钟数 |
 | `force` | 否 | 忽略 checkpoint 并执行 full，默认 `false` |

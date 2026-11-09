@@ -31,6 +31,16 @@ describe('repo-doctor reusable workflow', () => {
     expect(source).toMatch(/node_version:\n\s+description: [^\n]+\n\s+required: false\n\s+default: ''/u)
   })
 
+  it('reads helper and project pnpm versions from packageManager', async () => {
+    const source = await readFile('.github/workflows/repo-doctor.yml', 'utf8')
+    const inspect = source.slice(source.indexOf('\n  inspect:'), source.indexOf('\n  report:'))
+
+    expect(source).not.toMatch(/uses: pnpm\/action-setup@v6\n\s+with:\n\s+version: \d/u)
+    expect(source.match(/package_json_file: \.repo-doctor\/shared-actions\/package\.json/gu)).toHaveLength(3)
+    expect(inspect).toContain('package_json_file: source/package.json')
+    expect(source).toMatch(/pnpm_version:\n\s+description: [^\n]+\n\s+required: false\n\s+default: ''/u)
+  })
+
   it('reports setup failures without advancing either checkpoint', async () => {
     const source = await readFile('.github/workflows/repo-doctor.yml', 'utf8')
     const report = source.slice(source.indexOf('\n  report:'))

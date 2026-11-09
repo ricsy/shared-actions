@@ -19,6 +19,18 @@ describe('repo-doctor reusable workflow', () => {
     expect(shellCheckSetupIndex).toBeLessThan(inspect.indexOf('- name: Run inspection'))
   })
 
+  it('derives helper and project Node versions from package.json engines', async () => {
+    const source = await readFile('.github/workflows/repo-doctor.yml', 'utf8')
+    const inspect = source.slice(source.indexOf('\n  inspect:'), source.indexOf('\n  report:'))
+
+    expect(source).not.toMatch(/node-version: '?\d/u)
+    expect(source).not.toContain('uses: actions/setup-node')
+    expect(source.match(/package-json: \.repo-doctor\/shared-actions\/package\.json/gu)).toHaveLength(3)
+    expect(inspect).toContain('package-json: source/package.json')
+    expect(inspect).toContain('node-version: ${{ inputs.node_version }}')
+    expect(source).toMatch(/node_version:\n\s+description: [^\n]+\n\s+required: false\n\s+default: ''/u)
+  })
+
   it('reports setup failures without advancing either checkpoint', async () => {
     const source = await readFile('.github/workflows/repo-doctor.yml', 'utf8')
     const report = source.slice(source.indexOf('\n  report:'))

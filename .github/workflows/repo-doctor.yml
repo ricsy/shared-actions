@@ -13,8 +13,9 @@ on:
         default: ubuntu-latest
         type: string
       node_version:
-        description: Node.js version used by project commands.
-        required: true
+        description: Explicit Node.js version for project commands; empty derives the lowest supported line from the source package.json engines.node.
+        required: false
+        default: ''
         type: string
       pnpm_version:
         description: pnpm version used by project commands.
@@ -62,9 +63,9 @@ jobs:
           path: .repo-doctor/shared-actions
           persist-credentials: false
       - name: Setup helper Node.js
-        uses: actions/setup-node@v6
+        uses: ./.repo-doctor/shared-actions/.github/actions/setup-node
         with:
-          node-version: '24'
+          package-json: .repo-doctor/shared-actions/package.json
           package-manager-cache: false
       - name: Setup helper pnpm
         uses: pnpm/action-setup@v6
@@ -126,9 +127,9 @@ jobs:
           path: .repo-doctor/repo-kit
           persist-credentials: false
       - name: Setup helper Node.js
-        uses: actions/setup-node@v6
+        uses: ./.repo-doctor/shared-actions/.github/actions/setup-node
         with:
-          node-version: '24'
+          package-json: .repo-doctor/shared-actions/package.json
           package-manager-cache: false
       - name: Capture helper runtime
         id: helper-runtime
@@ -141,8 +142,9 @@ jobs:
       - name: Install helper dependencies
         run: pnpm --dir .repo-doctor/shared-actions install --prod --frozen-lockfile --ignore-scripts
       - name: Setup project Node.js
-        uses: actions/setup-node@v6
+        uses: ./.repo-doctor/shared-actions/.github/actions/setup-node
         with:
+          package-json: source/package.json
           node-version: ${{ inputs.node_version }}
           package-manager-cache: false
       - name: Setup project pnpm
@@ -204,9 +206,9 @@ jobs:
           path: .repo-doctor/shared-actions
           persist-credentials: false
       - name: Setup helper Node.js
-        uses: actions/setup-node@v6
+        uses: ./.repo-doctor/shared-actions/.github/actions/setup-node
         with:
-          node-version: '24'
+          package-json: .repo-doctor/shared-actions/package.json
           package-manager-cache: false
       - name: Setup helper pnpm
         uses: pnpm/action-setup@v6

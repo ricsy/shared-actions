@@ -12,8 +12,10 @@
 ```text
 .github/
 ├── actions/
-│   └── pypi/
-│       └── action.yml     # Python 包构建
+│   ├── pypi/
+│   │   └── action.yml     # Python 包构建
+│   └── setup-node/
+│       └── action.yml     # 按 engines.node 安装 Node.js
 └── workflows/
     ├── repo-doctor.yml  # 仓库日常巡检（workflow_call）
     ├── python/
@@ -42,6 +44,24 @@ jobs:
       - uses: ricsy/shared-actions/.github/actions/pypi@master
 ```
 
+### actions/setup-node
+
+按 `package.json` 的 `engines.node` 安装 Node.js，让 engines 成为 Node 版本的唯一声明，工作流里不再另写版本号。engines 写的是支持范围，action 取最低支持的大版本线：`>=24` 安装 `^24.0.0`，即 24 线最新补丁；上限落在同一大版本内（如 `>=24 <24.5`）时安装下限本身。`volta.node`、`.node-version`、`.nvmrc` 或 `node-version` 输入存在时按显式版本原样使用。规则与 repo-kit `rpk action repo-doctor` 一致。
+
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `package-json` | `package.json` | 读取版本的 package.json 路径 |
+| `node-version` | 空 | 显式版本，覆盖推导 |
+| `package-manager-cache` | `true` | 透传给 `actions/setup-node` |
+
+输出 `node-version` 为交给 `actions/setup-node` 的版本说明。没有 `engines.node`、范围没有下限时，步骤失败并给出 `::error::`，不猜测版本。解析脚本只用 runner 自带的 Node 运行，不依赖第三方包。
+
+```yaml
+steps:
+  - uses: actions/checkout@v6
+  - uses: ricsy/shared-actions/.github/actions/setup-node@<40-character-commit-sha>
+```
+
 ## 工作流
 
 ### repo-doctor
@@ -67,7 +87,6 @@ jobs:
     with:
       results_repository: owner/repo-doctor
       runner: ${{ vars.REPO_DOCTOR_RUNNER || 'ubuntu-latest' }}
-      node_version: '24'
       pnpm_version: '12.18.0'
       command_plan: '[{"id":"lint","stage":"lint","executable":"pnpm","args":["run","lint"]}]'
       timeout_minutes: 60
@@ -81,7 +100,7 @@ jobs:
 | --- | --- | --- |
 | `results_repository` | 是 | 保存当前巡检状态的私有仓库 |
 | `runner` | 否 | 三个巡检 job 使用的 runner 标签，默认 `ubuntu-latest` |
-| `node_version` | 是 | 项目命令使用的 Node.js 版本 |
+| `node_version` | 否 | 显式指定项目命令的 Node.js 版本；留空时由 [setup-node](#actionssetup-node) 从源码 `package.json` 的 `engines.node` 推导。repo-kit 只在项目用 `volta.node`、`.node-version`、`.nvmrc` 或 `--node-version` 显式指定时写入 |
 | `pnpm_version` | 是 | 项目命令使用的 pnpm 版本 |
 | `command_plan` | 是 | repo-kit 生成的不可变 JSON 命令计划 |
 | `timeout_minutes` | 是 | inspect job 的超时分钟数 |

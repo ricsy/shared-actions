@@ -7,6 +7,9 @@
   "author": "ricsy",
   "license": "MIT",
   "keywords": [],
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "repo-doctor": "node scripts/repo-doctor/cli.mjs",
     "test": "vitest run",

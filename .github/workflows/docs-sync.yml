@@ -34,7 +34,6 @@ on:
         required: false
 
 env:
-  NODE_VERSION: '24'
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   CLAUDE_API_URL: 'https://api.minimaxi.com/anthropic/v1/messages'
   CLAUDE_MODEL: 'MiniMax-M2.7'
@@ -55,11 +54,9 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 2. 设置 Node.js 环境
+      # 2. 按调用方 package.json 的 engines.node 设置 Node.js 环境
       - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+        uses: ricsy/shared-actions/.github/actions/setup-node@main
 
       # 3. 安装 pnpm
       - name: Install pnpm

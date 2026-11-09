@@ -1,0 +1,61 @@
+# =============================================================================
+# 按 engines 安装 Node.js
+#
+# 功能：从 package.json 的 engines.node 解析最低支持的大版本线（如 >=24 → ^24.0.0），
+#       再交给 actions/setup-node 安装，让 engines 成为 Node 版本的唯一声明。
+#       volta.node、.node-version、.nvmrc 或 node-version 输入存在时按显式版本原样使用。
+#       解析规则与 repo-kit `rpk action repo-doctor` 一致。
+#
+# 输入：
+#   package-json: 读取版本的 package.json 路径（默认 package.json）
+#   node-version: 显式版本，覆盖 package.json 的推导（默认空）
+#   package-manager-cache: 透传给 actions/setup-node（默认 true）
+#
+# 输出：
+#   node-version: 交给 actions/setup-node 的版本说明
+#
+# 使用方式：
+#   steps:
+#     - uses: actions/checkout@v6
+#     - uses: ricsy/shared-actions/.github/actions/setup-node@<sha>
+# =============================================================================
+
+name: Setup Node.js from engines
+description: 按 package.json 的 engines.node 最低支持版本线安装 Node.js
+
+inputs:
+  package-json:
+    description: 读取版本的 package.json 路径
+    required: false
+    default: package.json
+  node-version:
+    description: 显式 Node 版本，覆盖 package.json 的推导
+    required: false
+    default: ''
+  package-manager-cache:
+    description: 透传给 actions/setup-node 的 package-manager-cache
+    required: false
+    default: 'true'
+
+outputs:
+  node-version:
+    description: 交给 actions/setup-node 的版本说明
+    value: ${{ steps.resolve.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    # 用 runner 自带的 Node 解析版本，脚本不依赖第三方包
+    - name: Resolve Node.js version
+      id: resolve
+      shell: bash
+      env:
+        PACKAGE_JSON: ${{ inputs.package-json }}
+        NODE_VERSION_OVERRIDE: ${{ inputs.node-version }}
+      run: node "$GITHUB_ACTION_PATH/resolve-node-version.mjs" "$PACKAGE_JSON" "$NODE_VERSION_OVERRIDE"
+
+    - name: Setup Node.js
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+      with:
+        node-version: ${{ steps.resolve.outputs.version }}
+        package-manager-cache: ${{ inputs.package-manager-cache }}
